@@ -952,19 +952,44 @@
         function hideConfirmPanel() { document.getElementById('confirm-panel').classList.remove('show'); }
 
         async function confirmDrawing() {
-            if (!pendingLayer || !pendingType) return;
-            if (pendingType === 'marker') {
-                const { lat, lng } = pendingLayer.getLatLng();
-                await savePoint({ type: currentMarkerType, title:'', notes:'', groupIds:[], lat, lng });
-            } else {
-                const latlngs = pendingLayer.getLatLngs();
-                let coords = latlngs.map(ll => [ll.lng, ll.lat]);
-                coords = await snapCoordinates(coords);
-                await saveCable({ title:'', color:currentColor, weight:currentWeight, dashArray:currentDashArray, notes:'', groupIds:[], coordinates:coords });
-            }
-            map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null;
-            hideConfirmPanel(); isDrawing = false;
+    if (!pendingLayer || !pendingType) return;
+    try {
+        if (pendingType === 'marker') {
+            const { lat, lng } = pendingLayer.getLatLng();
+            const { error } = await supabase.from('points').insert([{
+                type: currentMarkerType,
+                title: '',
+                notes: '',
+                groupIds: [],
+                lat,
+                lng
+            }]);
+            if (error) throw new Error(error.message);
+        } else if (pendingType === 'polyline') {
+            const latlngs = pendingLayer.getLatLngs();
+            let coords = latlngs.map(ll => [ll.lng, ll.lat]);
+            coords = await snapCoordinates(coords);
+            const { error } = await supabase.from('cables').insert([{
+                title: '',
+                color: currentColor,
+                weight: currentWeight,
+                dashArray: currentDashArray,
+                notes: '',
+                groupIds: [],
+                coordinates: coords
+            }]);
+            if (error) throw new Error(error.message);
         }
+        map.removeLayer(pendingLayer);
+        pendingLayer = null;
+        pendingType = null;
+        hideConfirmPanel();
+        isDrawing = false;
+    } catch (err) {
+        alert('❌ Помилка збереження: ' + err.message);
+        console.error(err);
+    }
+}
 
         async function cancelConfirmDrawing() {
             if (pendingLayer) { map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null; }
