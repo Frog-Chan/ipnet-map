@@ -1,12 +1,10 @@
-<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>IP Net – Спільна карта мережі</title>
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
     <style>
         :root {
             --bg: #1e293b;
@@ -28,7 +26,6 @@
             color: var(--text);
         }
         #map { height:100%; width:100%; z-index:1; }
-
         #login-screen {
             position: absolute; top:0; left:0; width:100%; height:100%;
             background: var(--bg); z-index:9999;
@@ -80,7 +77,6 @@
             max-width: 340px; backdrop-filter: blur(10px);
         }
         #toolbar.show { display: flex; }
-
         .tool-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         #toolbar button, #toolbar select, #toolbar input {
             background: var(--bg); border: 1px solid var(--border);
@@ -122,7 +118,6 @@
             overflow-y: auto; backdrop-filter: blur(10px);
         }
         #objects-panel.show { display: flex; }
-
         #search-input {
             width: 100%; padding: 10px; border-radius: 10px;
             border: 1px solid var(--border); background: var(--bg);
@@ -159,7 +154,6 @@
         .group-header .group-actions span { cursor: pointer; padding: 2px 6px; border-radius: 6px; font-size: 0.85rem; }
         .group-header .group-actions .edit-group:hover { background: rgba(59,130,246,0.3); }
         .group-header .group-actions .delete-group:hover { background: rgba(239,68,68,0.3); }
-
         .group-children { margin-left: 12px; display: none; flex-direction: column; gap: 4px; }
         .group-children.open { display: flex; }
 
@@ -168,7 +162,6 @@
             background: none; border: none; color: var(--text);
             font-size: 1.8rem; cursor: pointer; line-height: 1;
         }
-
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.7); z-index: 3000;
@@ -226,8 +219,6 @@
 </head>
 <body>
     <div id="map"></div>
-
-    <!-- Екран входу -->
     <div id="login-screen">
         <div class="login-box">
             <h3>🔐 Доступ до мережі IP Net</h3>
@@ -238,12 +229,10 @@
         </div>
     </div>
 
-    <!-- FAB кнопки -->
     <div class="fab" id="fab-tools" title="Інструменти" style="display:none;">🛠️</div>
     <div class="fab" id="fab-list" title="Список об'єктів" style="display:none;">📋</div>
     <div class="fab" id="fab-undo" title="Видалити останню вершину" style="display:none;">↩️</div>
 
-    <!-- Панель інструментів -->
     <div id="toolbar">
         <div class="tool-row">
             <button id="btn-marker">📍 Точка</button>
@@ -279,14 +268,12 @@
         </div>
     </div>
 
-    <!-- Панель підтвердження -->
     <div id="confirm-panel">
         <span>Новий об'єкт:</span>
         <button id="confirm-save">✔ Зберегти</button>
         <button id="confirm-cancel">✖ Скасувати</button>
     </div>
 
-    <!-- Бічна панель об'єктів -->
     <div id="objects-panel">
         <button class="close-btn" id="close-panel">✕</button>
         <h3 style="margin-bottom:10px;">Об'єкти мережі</h3>
@@ -294,10 +281,8 @@
         <div class="object-list" id="object-list"></div>
     </div>
 
-    <!-- Spider-меню -->
     <div id="spider-menu"></div>
 
-    <!-- Модалка груп -->
     <div class="modal-overlay" id="group-modal">
         <div class="modal">
             <h3 id="group-modal-title">Створити групу</h3>
@@ -317,7 +302,6 @@
         // ========== КОНФІГУРАЦІЯ SUPABASE ==========
         const SUPABASE_URL = 'https://fgvjhukykjqxspncaxiv.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndmpodWt5a2pxeHNwbmNheGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNTQ5NjAsImV4cCI6MjA5NzczMDk2MH0.B_mPoR_jLEqnn_UHJmvr4fWfp-sIhRuT65TBitNFmlk';
-
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // ========== ЗМІННІ ==========
@@ -357,21 +341,12 @@
         function createAdaptiveIcon(type) {
             const html = icons[type]?.html || '📍';
             const size = getIconSize();
-            return L.divIcon({
-                html: html,
-                className: '',
-                iconSize: [size, size],
-                popupAnchor: [0, -size/2]
-            });
+            return L.divIcon({ html, className: '', iconSize: [size, size], popupAnchor: [0, -size/2] });
         }
 
         const icons = {
-            server:   { html:'🖥️' },
-            muff:     { html:'🗄️' },
-            box:      { html:'📦' },
-            pole:     { html:'🏗️' },
-            manhole:  { html:'🕳️' },
-            antenna:  { html:'📡' },
+            server:   { html:'🖥️' }, muff: { html:'🗄️' }, box: { html:'📦' },
+            pole:     { html:'🏗️' }, manhole: { html:'🕳️' }, antenna: { html:'📡' },
             cabinet:  { html:'🗄️' },
         };
 
@@ -395,11 +370,8 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
             const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) {
-                loginError.textContent = '❌ Невірний email або пароль';
-            } else {
-                showMap();
-            }
+            if (error) loginError.textContent = '❌ Невірний email або пароль';
+            else showMap();
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -408,56 +380,20 @@
         });
 
         // ========== SUPABASE CRUD ==========
-        async function loadPoints() {
-            const { data } = await supabase.from('points').select('*');
-            return data || [];
-        }
-        async function savePoint(point) {
-            const { error } = await supabase.from('points').insert([point]);
-            if (error) console.error('savePoint:', error);
-        }
-        async function updatePoint(id, updates) {
-            const { error } = await supabase.from('points').update(updates).eq('id', id);
-            if (error) console.error('updatePoint:', error);
-        }
-        async function deletePoint(id) {
-            const { error } = await supabase.from('points').delete().eq('id', id);
-            if (error) console.error('deletePoint:', error);
-        }
+        async function loadPoints() { const { data } = await supabase.from('points').select('*'); return data || []; }
+        async function savePoint(point) { const { error } = await supabase.from('points').insert([point]); if (error) console.error('savePoint:', error); }
+        async function updatePoint(id, updates) { const { error } = await supabase.from('points').update(updates).eq('id', id); if (error) console.error('updatePoint:', error); }
+        async function deletePoint(id) { const { error } = await supabase.from('points').delete().eq('id', id); if (error) console.error('deletePoint:', error); }
 
-        async function loadCables() {
-            const { data } = await supabase.from('cables').select('*');
-            return data || [];
-        }
-        async function saveCable(cable) {
-            const { error } = await supabase.from('cables').insert([cable]);
-            if (error) console.error('saveCable:', error);
-        }
-        async function updateCable(id, updates) {
-            const { error } = await supabase.from('cables').update(updates).eq('id', id);
-            if (error) console.error('updateCable:', error);
-        }
-        async function deleteCable(id) {
-            const { error } = await supabase.from('cables').delete().eq('id', id);
-            if (error) console.error('deleteCable:', error);
-        }
+        async function loadCables() { const { data } = await supabase.from('cables').select('*'); return data || []; }
+        async function saveCable(cable) { const { error } = await supabase.from('cables').insert([cable]); if (error) console.error('saveCable:', error); }
+        async function updateCable(id, updates) { const { error } = await supabase.from('cables').update(updates).eq('id', id); if (error) console.error('updateCable:', error); }
+        async function deleteCable(id) { const { error } = await supabase.from('cables').delete().eq('id', id); if (error) console.error('deleteCable:', error); }
 
-        async function loadGroups() {
-            const { data } = await supabase.from('groups').select('*');
-            return data || [];
-        }
-        async function saveGroup(group) {
-            const { error } = await supabase.from('groups').insert([group]);
-            if (error) console.error('saveGroup:', error);
-        }
-        async function updateGroup(id, updates) {
-            const { error } = await supabase.from('groups').update(updates).eq('id', id);
-            if (error) console.error('updateGroup:', error);
-        }
-        async function deleteGroup(id) {
-            const { error } = await supabase.from('groups').delete().eq('id', id);
-            if (error) console.error('deleteGroup:', error);
-        }
+        async function loadGroups() { const { data } = await supabase.from('groups').select('*'); return data || []; }
+        async function saveGroup(group) { const { error } = await supabase.from('groups').insert([group]); if (error) console.error('saveGroup:', error); }
+        async function updateGroup(id, updates) { const { error } = await supabase.from('groups').update(updates).eq('id', id); if (error) console.error('updateGroup:', error); }
+        async function deleteGroup(id) { const { error } = await supabase.from('groups').delete().eq('id', id); if (error) console.error('deleteGroup:', error); }
 
         // ========== REALTIME ==========
         function subscribeToRealtime() {
@@ -472,8 +408,7 @@
                         const m = pointsMarkers.get(payload.old.id);
                         if (m) { map.removeLayer(m); pointsMarkers.delete(payload.old.id); }
                     }
-                })
-                .subscribe();
+                }).subscribe();
 
             supabase.channel('cables-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'cables' }, (payload) => {
@@ -486,58 +421,29 @@
                         const obj = cablesLines.get(payload.old.id);
                         if (obj) { map.removeLayer(obj.visible); map.removeLayer(obj.hitbox); cablesLines.delete(payload.old.id); }
                     }
-                })
-                .subscribe();
+                }).subscribe();
 
             supabase.channel('groups-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, () => {
                     if (document.getElementById('objects-panel').classList.contains('show')) {
                         renderObjectList(document.getElementById('search-input').value);
                     }
-                })
-                .subscribe();
+                }).subscribe();
         }
 
         // ========== КАРТА ==========
         function initMap() {
-            map = L.map('map', {
-                center: [49.5369, 26.2106],
-                zoom: 14,
-                zoomControl: true,
-                maxZoom: 22,
-                attributionControl: true
-            });
-
-            const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles © Esri', maxNativeZoom: 19, maxZoom: 22
-            });
-            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, CartoDB', maxNativeZoom: 19, maxZoom: 22, pane: 'overlayPane'
-            });
-            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap', maxNativeZoom: 19, maxZoom: 22
-            });
-
-            map.addLayer(satellite);
-            map.addLayer(labels);
-
+            map = L.map('map', { center: [49.5369, 26.2106], zoom: 14, zoomControl: true, maxZoom: 22, attributionControl: true });
+            const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxNativeZoom: 19, maxZoom: 22 });
+            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, CartoDB', maxNativeZoom: 19, maxZoom: 22, pane: 'overlayPane' });
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxNativeZoom: 19, maxZoom: 22 });
+            map.addLayer(satellite); map.addLayer(labels);
             L.control.layers({ "Супутник + підписи": satellite, "Кольорова OSM": osm }, null, { position: 'topright' }).addTo(map);
-
-            map.on('zoomend', () => {
-                updateAllMarkerIcons();
-                updateAllCableWeights();
-            });
-
-            map.on('click', () => {
-                closeSpiderMenu();
-                document.getElementById('toolbar').classList.remove('show');
-            });
-
+            map.on('zoomend', () => { updateAllMarkerIcons(); updateAllCableWeights(); });
+            map.on('click', () => { closeSpiderMenu(); document.getElementById('toolbar').classList.remove('show'); });
             (async () => {
-                const points = await loadPoints();
-                points.forEach(addPointToMap);
-                const cables = await loadCables();
-                cables.forEach(addCableToMap);
+                const points = await loadPoints(); points.forEach(addPointToMap);
+                const cables = await loadCables(); cables.forEach(addCableToMap);
                 subscribeToRealtime();
             })();
         }
@@ -552,23 +458,15 @@
         function updateAllCableWeights() {
             cablesLines.forEach((obj, id) => {
                 supabase.from('cables').select('weight').eq('id', id).single().then(({ data }) => {
-                    if (data) {
-                        const displayWeight = getWeightForZoom(data.weight || 3);
-                        if (obj.visible) obj.visible.setStyle({ weight: Math.round(displayWeight) });
-                    }
+                    if (data) { const displayWeight = getWeightForZoom(data.weight || 3); if (obj.visible) obj.visible.setStyle({ weight: Math.round(displayWeight) }); }
                 });
             });
         }
 
         function addPointToMap(point) {
             if (pointsMarkers.has(point.id)) return;
-            const icon = createAdaptiveIcon(point.type);
-            const marker = L.marker([point.lat, point.lng], { icon, interactive: true }).addTo(map);
-            marker.on('click', (e) => {
-                if (isDrawing) return;
-                L.DomEvent.stopPropagation(e);
-                handleMarkerClick(point.id, e.originalEvent);
-            });
+            const marker = L.marker([point.lat, point.lng], { icon: createAdaptiveIcon(point.type), interactive: true }).addTo(map);
+            marker.on('click', (e) => { if (isDrawing) return; L.DomEvent.stopPropagation(e); handleMarkerClick(point.id, e.originalEvent); });
             pointsMarkers.set(point.id, marker);
         }
 
@@ -576,30 +474,14 @@
             if (cablesLines.has(cable.id)) return;
             const latlngs = cable.coordinates.map(c => [c[1], c[0]]);
             const displayWeight = getWeightForZoom(cable.weight || 3);
-
-            const visible = L.polyline(latlngs, {
-                color: cable.color,
-                weight: Math.round(displayWeight),
-                dashArray: cable.dashArray || null,
-                interactive: false
-            }).addTo(map);
-
-            const hitbox = L.polyline(latlngs, {
-                color: 'transparent', weight: 20, opacity: 0, interactive: true
-            }).addTo(map);
-
-            hitbox.on('click', (e) => {
-                if (isDrawing) return;
-                L.DomEvent.stopPropagation(e);
-                handleCableClick(cable.id, e.originalEvent);
-            });
-
+            const visible = L.polyline(latlngs, { color: cable.color, weight: Math.round(displayWeight), dashArray: cable.dasharray || null, interactive: false }).addTo(map);
+            const hitbox = L.polyline(latlngs, { color: 'transparent', weight: 20, opacity: 0, interactive: true }).addTo(map);
+            hitbox.on('click', (e) => { if (isDrawing) return; L.DomEvent.stopPropagation(e); handleCableClick(cable.id, e.originalEvent); });
             cablesLines.set(cable.id, { visible, hitbox });
         }
 
         function distanceToSegmentSq(latlng, segStart, segEnd) {
-            const [x, y] = [latlng.lng, latlng.lat];
-            const [x1, y1] = segStart, [x2, y2] = segEnd;
+            const [x, y] = [latlng.lng, latlng.lat], [x1, y1] = segStart, [x2, y2] = segEnd;
             const dx = x2 - x1, dy = y2 - y1, lengthSq = dx*dx + dy*dy;
             if (lengthSq === 0) return Math.hypot(x - x1, y - y1);
             const t = Math.max(0, Math.min(1, ((x - x1)*dx + (y - y1)*dy) / lengthSq));
@@ -607,8 +489,7 @@
         }
 
         async function findNearbyObjects(clickLatLng, excludeId, excludeType) {
-            const threshold = 0.0001;
-            const nearby = [];
+            const threshold = 0.0001, nearby = [];
             for (const p of await loadPoints()) {
                 if (excludeType === 'point' && p.id === excludeId) continue;
                 if (Math.hypot(p.lat - clickLatLng.lat, p.lng - clickLatLng.lng) < threshold) nearby.push({type:'point', data:p});
@@ -651,7 +532,6 @@
             const clientX = event.clientX || (event.touches?.[0]?.clientX) || 100;
             const clientY = event.clientY || (event.touches?.[0]?.clientY) || 100;
             menu.style.left = clientX + 'px'; menu.style.top = clientY + 'px';
-
             const seen = new Set();
             objects.filter(o => { const key = o.type+'_'+o.data.id; if (seen.has(key)) return false; seen.add(key); return true; })
                 .forEach(obj => {
@@ -660,8 +540,7 @@
                     const title = obj.data.title || (obj.type==='point'?'Точка':'Кабель');
                     let colorDot = obj.type==='cable' ? `<span class="color-dot" style="background:${obj.data.color};"></span>` : '';
                     div.innerHTML = `<span>${iconHtml}${colorDot}</span> <span>${escHtml(title)}</span>`;
-                    div.addEventListener('click', (e) => {
-                        e.stopPropagation(); closeSpiderMenu();
+                    div.addEventListener('click', (e) => { e.stopPropagation(); closeSpiderMenu();
                         if (obj.type==='point') { map.setView([obj.data.lat, obj.data.lng], 18); openPointPopup(obj.data); }
                         else { const mid = obj.data.coordinates[Math.floor(obj.data.coordinates.length/2)]; map.setView([mid[1], mid[0]], 16); openCablePopup(obj.data); }
                     });
@@ -675,16 +554,8 @@
             if (menu.style.display !== 'none') { menu.style.display = 'none'; spiderMenuVisible = false; }
         }
 
-        function openPointPopup(point) {
-            const marker = pointsMarkers.get(point.id);
-            if (!marker) return;
-            marker.bindPopup(L.popup().setContent(createPointPopupContent(point))).openPopup();
-        }
-        function openCablePopup(cable) {
-            const obj = cablesLines.get(cable.id);
-            if (!obj) return;
-            obj.hitbox.bindPopup(L.popup().setContent(createCablePopupContent(cable))).openPopup();
-        }
+        function openPointPopup(point) { pointsMarkers.get(point.id)?.bindPopup(L.popup().setContent(createPointPopupContent(point))).openPopup(); }
+        function openCablePopup(cable) { cablesLines.get(cable.id)?.hitbox.bindPopup(L.popup().setContent(createCablePopupContent(cable))).openPopup(); }
 
         async function createGroupCheckboxes(selectedIds, searchTerm='') {
             const groups = await loadGroups();
@@ -702,69 +573,33 @@
         function createPointPopupContent(point) {
             const container = document.createElement('div');
             container.style.cssText = 'min-width:260px;max-width:320px;';
-            const selectedIds = point.groupIds || [];
+            const selectedIds = point.groupids || [];
             container.innerHTML = `
                 <h4 style="margin:0 0 8px;font-size:1.1rem;">${escHtml(point.title) || 'Точка'}</h4>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Тип</label>
-                    <select class="popup-type" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">
-                        ${Object.keys(icons).map(t => `<option value="${t}" ${point.type===t?'selected':''}>${icons[t].html} ${t}</option>`).join('')}
-                    </select>
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Назва</label>
-                    <input class="popup-title" value="${escHtml(point.title||'')}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Групи</label>
-                    <input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;margin-top:2px;">
-                    <div class="group-checkboxes" style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;margin-top:4px;"></div>
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Нотатки</label>
-                    <textarea class="popup-notes" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;resize:vertical;">${escHtml(point.notes||'')}</textarea>
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Координати</label>
-                    <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
-                        <input class="popup-coords" value="${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;background:#f8fafc;">
-                        <button class="copy-coords-btn" style="padding:6px 10px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">📋</button>
-                    </div>
-                    <a href="https://www.google.com/maps?q=${point.lat},${point.lng}" target="_blank" style="font-size:0.8rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a>
-                </div>
-                <div style="display:flex;gap:8px;">
-                    <button class="popup-save" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">💾 Зберегти</button>
-                    <button class="popup-delete" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--danger);color:white;font-weight:bold;cursor:pointer;">🗑️ Видалити</button>
-                </div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Тип</label><select class="popup-type" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">${Object.keys(icons).map(t => `<option value="${t}" ${point.type===t?'selected':''}>${icons[t].html} ${t}</option>`).join('')}</select></div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Назва</label><input class="popup-title" value="${escHtml(point.title||'')}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;"></div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;margin-top:2px;"><div class="group-checkboxes" style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;margin-top:4px;"></div></div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Нотатки</label><textarea class="popup-notes" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;resize:vertical;">${escHtml(point.notes||'')}</textarea></div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Координати</label><div style="display:flex;gap:6px;align-items:center;margin-top:2px;"><input class="popup-coords" value="${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;background:#f8fafc;"><button class="copy-coords-btn" style="padding:6px 10px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${point.lat},${point.lng}" target="_blank" style="font-size:0.8rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a></div>
+                <div style="display:flex;gap:8px;"><button class="popup-save" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">💾 Зберегти</button><button class="popup-delete" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--danger);color:white;font-weight:bold;cursor:pointer;">🗑️ Видалити</button></div>
             `;
-
             const groupSearch = container.querySelector('.group-search');
             const groupCheckboxes = container.querySelector('.group-checkboxes');
             const updateGroups = (term='') => createGroupCheckboxes(selectedIds, term).then(html => groupCheckboxes.innerHTML = html);
             updateGroups();
             groupSearch.addEventListener('input', () => updateGroups(groupSearch.value));
-
-            container.querySelector('.copy-coords-btn').addEventListener('click', () => {
-                const coordsInput = container.querySelector('.popup-coords');
-                coordsInput.select();
-                document.execCommand('copy');
-                alert('Координати скопійовано!');
-            });
-
+            container.querySelector('.copy-coords-btn').addEventListener('click', () => { const ci = container.querySelector('.popup-coords'); ci.select(); document.execCommand('copy'); alert('Координати скопійовано!'); });
             container.querySelector('.popup-save').onclick = async () => {
                 const type = container.querySelector('.popup-type').value;
                 const title = container.querySelector('.popup-title').value;
                 const notes = container.querySelector('.popup-notes').value;
                 const checkboxes = container.querySelectorAll('.group-checkboxes input[type="checkbox"]:checked');
-                const groupIds = Array.from(checkboxes).map(cb => cb.value);
-                await updatePoint(point.id, { type, title, notes, groupIds });
+                const groupids = Array.from(checkboxes).map(cb => cb.value);
+                await updatePoint(point.id, { type, title, notes, groupids });
                 pointsMarkers.get(point.id)?.closePopup();
             };
             container.querySelector('.popup-delete').onclick = async () => {
-                if (confirm('Видалити цю точку?')) {
-                    await deletePoint(point.id);
-                    pointsMarkers.get(point.id)?.closePopup();
-                }
+                if (confirm('Видалити цю точку?')) { await deletePoint(point.id); pointsMarkers.get(point.id)?.closePopup(); }
             };
             return container;
         }
@@ -772,88 +607,40 @@
         function createCablePopupContent(cable) {
             const container = document.createElement('div');
             container.style.cssText = 'min-width:260px;max-width:320px;';
-            const dashOptions = [
-                { v:'', l:'Суцільна' },{ v:'10,10', l:'Штрих' },{ v:'5,5', l:'Пунктир' },{ v:'15,5,2,5', l:'Штрих-пунктир' }
-            ];
-            const selectedIds = cable.groupIds || [];
+            const dashOptions = [{ v:'', l:'Суцільна' },{ v:'10,10', l:'Штрих' },{ v:'5,5', l:'Пунктир' },{ v:'15,5,2,5', l:'Штрих-пунктир' }];
+            const selectedIds = cable.groupids || [];
             const midCoord = cable.coordinates[Math.floor(cable.coordinates.length/2)];
             const midLatLng = midCoord ? `${midCoord[1].toFixed(6)}, ${midCoord[0].toFixed(6)}` : '';
-
             container.innerHTML = `
                 <h4 style="margin:0 0 8px;font-size:1.1rem;">${escHtml(cable.title) || 'Кабель'}</h4>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Назва</label>
-                    <input class="popup-title" value="${escHtml(cable.title||'')}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">
-                </div>
-                <div style="display:flex;gap:8px;margin-bottom:8px;">
-                    <div style="flex:1;">
-                        <label style="font-size:0.8rem;color:#94a3b8;">Колір</label>
-                        <input type="color" class="popup-color" value="${cable.color}" style="width:100%;height:40px;border-radius:8px;border:1px solid #cbd5e1;margin-top:2px;">
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:0.8rem;color:#94a3b8;">Товщина</label>
-                        <input type="range" class="popup-weight" min="1" max="10" value="${cable.weight || 3}" style="width:100%;margin-top:2px;">
-                    </div>
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Стиль лінії</label>
-                    <select class="popup-dash" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">
-                        ${dashOptions.map(o => `<option value="${o.v}" ${(cable.dashArray||'')===o.v?'selected':''}>${o.l}</option>`).join('')}
-                    </select>
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Групи</label>
-                    <input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;margin-top:2px;">
-                    <div class="group-checkboxes" style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;margin-top:4px;"></div>
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Нотатки</label>
-                    <textarea class="popup-notes" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;resize:vertical;">${escHtml(cable.notes||'')}</textarea>
-                </div>
-                ${midCoord ? `
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:0.8rem;color:#94a3b8;">Координати (середина кабелю)</label>
-                    <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
-                        <input class="popup-coords" value="${midLatLng}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;background:#f8fafc;">
-                        <button class="copy-coords-btn" style="padding:6px 10px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">📋</button>
-                    </div>
-                    <a href="https://www.google.com/maps?q=${midLatLng}" target="_blank" style="font-size:0.8rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a>
-                </div>` : ''}
-                <div style="display:flex;gap:8px;">
-                    <button class="popup-save" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">💾 Зберегти</button>
-                    <button class="popup-delete" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--danger);color:white;font-weight:bold;cursor:pointer;">🗑️ Видалити</button>
-                </div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Назва</label><input class="popup-title" value="${escHtml(cable.title||'')}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;"></div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;"><div style="flex:1;"><label style="font-size:0.8rem;color:#94a3b8;">Колір</label><input type="color" class="popup-color" value="${cable.color}" style="width:100%;height:40px;border-radius:8px;border:1px solid #cbd5e1;margin-top:2px;"></div><div style="flex:1;"><label style="font-size:0.8rem;color:#94a3b8;">Товщина</label><input type="range" class="popup-weight" min="1" max="10" value="${cable.weight || 3}" style="width:100%;margin-top:2px;"></div></div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Стиль лінії</label><select class="popup-dash" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">${dashOptions.map(o => `<option value="${o.v}" ${(cable.dasharray||'')===o.v?'selected':''}>${o.l}</option>`).join('')}</select></div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;margin-top:2px;"><div class="group-checkboxes" style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;margin-top:4px;"></div></div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Нотатки</label><textarea class="popup-notes" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;resize:vertical;">${escHtml(cable.notes||'')}</textarea></div>
+                ${midCoord ? `<div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Координати (середина кабелю)</label><div style="display:flex;gap:6px;align-items:center;margin-top:2px;"><input class="popup-coords" value="${midLatLng}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;background:#f8fafc;"><button class="copy-coords-btn" style="padding:6px 10px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${midLatLng}" target="_blank" style="font-size:0.8rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a></div>` : ''}
+                <div style="display:flex;gap:8px;"><button class="popup-save" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">💾 Зберегти</button><button class="popup-delete" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--danger);color:white;font-weight:bold;cursor:pointer;">🗑️ Видалити</button></div>
             `;
-
             const groupSearch = container.querySelector('.group-search');
             const groupCheckboxes = container.querySelector('.group-checkboxes');
             const updateGroups = (term='') => createGroupCheckboxes(selectedIds, term).then(html => groupCheckboxes.innerHTML = html);
             updateGroups();
             groupSearch.addEventListener('input', () => updateGroups(groupSearch.value));
-
             const copyBtn = container.querySelector('.copy-coords-btn');
-            if (copyBtn) copyBtn.addEventListener('click', () => {
-                container.querySelector('.popup-coords').select();
-                document.execCommand('copy');
-                alert('Координати скопійовано!');
-            });
-
+            if (copyBtn) copyBtn.addEventListener('click', () => { container.querySelector('.popup-coords').select(); document.execCommand('copy'); alert('Координати скопійовано!'); });
             container.querySelector('.popup-save').onclick = async () => {
                 const title = container.querySelector('.popup-title').value;
                 const color = container.querySelector('.popup-color').value;
                 const weight = +container.querySelector('.popup-weight').value;
-                const dashArray = container.querySelector('.popup-dash').value;
+                const dasharray = container.querySelector('.popup-dash').value;
                 const notes = container.querySelector('.popup-notes').value;
                 const checkboxes = container.querySelectorAll('.group-checkboxes input[type="checkbox"]:checked');
-                const groupIds = Array.from(checkboxes).map(cb => cb.value);
-                await updateCable(cable.id, { title, color, weight, dashArray, notes, groupIds });
+                const groupids = Array.from(checkboxes).map(cb => cb.value);
+                await updateCable(cable.id, { title, color, weight, dasharray, notes, groupids });
                 cablesLines.get(cable.id)?.hitbox.closePopup();
             };
             container.querySelector('.popup-delete').onclick = async () => {
-                if (confirm('Видалити цей кабель?')) {
-                    await deleteCable(cable.id);
-                    cablesLines.get(cable.id)?.hitbox.closePopup();
-                }
+                if (confirm('Видалити цей кабель?')) { await deleteCable(cable.id); cablesLines.get(cable.id)?.hitbox.closePopup(); }
             };
             return container;
         }
@@ -864,9 +651,7 @@
         function cancelDrawing() {
             if (mapClickHandler) { map.off('click', mapClickHandler); mapClickHandler = null; }
             if (pendingPolyline) { map.removeLayer(pendingPolyline); pendingPolyline = null; }
-            pendingLineCoords = [];
-            activeDrawType = null;
-            isDrawing = false;
+            pendingLineCoords = []; activeDrawType = null; isDrawing = false;
             document.getElementById('btn-cancel').style.display = 'none';
             document.getElementById('btn-finish').style.display = 'none';
             document.getElementById('btn-marker').classList.remove('active');
@@ -901,7 +686,7 @@
                     const { lat, lng } = e.latlng;
                     pendingLineCoords.push([lat, lng]);
                     if (pendingPolyline) pendingPolyline.addLatLng([lat, lng]);
-                    else pendingPolyline = L.polyline([[lat, lng]], { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map);
+                    else pendingPolyline = L.polyline([[lat, lng]], { color: currentColor, weight: currentWeight, dasharray: currentDashArray }).addTo(map);
                 };
                 map.on('click', mapClickHandler);
             }
@@ -911,9 +696,8 @@
             if (activeDrawType !== 'polyline' || pendingLineCoords.length < 2) { alert('Потрібно щонайменше дві вершини.'); return; }
             const simplified = simplifyLine(pendingLineCoords, 0.00002);
             map.removeLayer(pendingPolyline);
-            pendingPolyline = L.polyline(simplified, { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map);
-            pendingLineCoords = simplified;
-            pendingLayer = pendingPolyline; pendingType = 'polyline';
+            pendingPolyline = L.polyline(simplified, { color: currentColor, weight: currentWeight, dasharray: currentDashArray }).addTo(map);
+            pendingLineCoords = simplified; pendingLayer = pendingPolyline; pendingType = 'polyline';
             pendingPolyline = null; pendingLineCoords = [];
             showConfirmPanel(); cancelDrawing();
         }
@@ -945,51 +729,26 @@
         function undoLastVertex() {
             if (activeDrawType !== 'polyline' || !pendingPolyline || pendingLineCoords.length === 0) return;
             pendingLineCoords.pop(); map.removeLayer(pendingPolyline);
-            pendingPolyline = pendingLineCoords.length > 0 ? L.polyline(pendingLineCoords, { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map) : null;
+            pendingPolyline = pendingLineCoords.length > 0 ? L.polyline(pendingLineCoords, { color: currentColor, weight: currentWeight, dasharray: currentDashArray }).addTo(map) : null;
         }
 
         function showConfirmPanel() { document.getElementById('confirm-panel').classList.add('show'); }
         function hideConfirmPanel() { document.getElementById('confirm-panel').classList.remove('show'); }
 
         async function confirmDrawing() {
-    if (!pendingLayer || !pendingType) return;
-    try {
-        if (pendingType === 'marker') {
-            const { lat, lng } = pendingLayer.getLatLng();
-            const { error } = await supabase.from('points').insert([{
-                type: currentMarkerType,
-                title: '',
-                notes: '',
-                groupIds: [],
-                lat,
-                lng
-            }]);
-            if (error) throw new Error(error.message);
-        } else if (pendingType === 'polyline') {
-            const latlngs = pendingLayer.getLatLngs();
-            let coords = latlngs.map(ll => [ll.lng, ll.lat]);
-            coords = await snapCoordinates(coords);
-            const { error } = await supabase.from('cables').insert([{
-                title: '',
-                color: currentColor,
-                weight: currentWeight,
-                dashArray: currentDashArray,
-                notes: '',
-                groupIds: [],
-                coordinates: coords
-            }]);
-            if (error) throw new Error(error.message);
+            if (!pendingLayer || !pendingType) return;
+            if (pendingType === 'marker') {
+                const { lat, lng } = pendingLayer.getLatLng();
+                await savePoint({ type: currentMarkerType, title:'', notes:'', groupids:[], lat, lng });
+            } else {
+                const latlngs = pendingLayer.getLatLngs();
+                let coords = latlngs.map(ll => [ll.lng, ll.lat]);
+                coords = await snapCoordinates(coords);
+                await saveCable({ title:'', color:currentColor, weight:currentWeight, dasharray:currentDashArray, notes:'', groupids:[], coordinates:coords });
+            }
+            map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null;
+            hideConfirmPanel(); isDrawing = false;
         }
-        map.removeLayer(pendingLayer);
-        pendingLayer = null;
-        pendingType = null;
-        hideConfirmPanel();
-        isDrawing = false;
-    } catch (err) {
-        alert('❌ Помилка збереження: ' + err.message);
-        console.error(err);
-    }
-}
 
         async function cancelConfirmDrawing() {
             if (pendingLayer) { map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null; }
@@ -1001,10 +760,7 @@
             const SNAP = 0.00005;
             return coords.map(v => {
                 let best = null, bestDist = Infinity;
-                for (const p of points) {
-                    const d = Math.hypot(v[0]-p.lng, v[1]-p.lat);
-                    if (d < SNAP && d < bestDist) { bestDist = d; best = p; }
-                }
+                for (const p of points) { const d = Math.hypot(v[0]-p.lng, v[1]-p.lat); if (d < SNAP && d < bestDist) { bestDist = d; best = p; } }
                 return best ? [best.lng, best.lat] : v;
             });
         }
@@ -1017,8 +773,7 @@
             document.getElementById('group-name-input').value = group ? group.name : '';
             document.getElementById('group-delete').style.display = group ? 'inline-block' : 'none';
             editingGroupId = group ? group.id : null;
-            m.classList.add('show');
-            document.getElementById('group-name-input').focus();
+            m.classList.add('show'); document.getElementById('group-name-input').focus();
         }
         function closeGroupModal() { document.getElementById('group-modal').classList.remove('show'); editingGroupId = null; }
         async function saveGroupFromModal() {
@@ -1032,10 +787,10 @@
         async function deleteGroupFromModal() {
             if (!editingGroupId) return;
             if (!confirm('Видалити групу? Об\'єкти залишаться без неї.')) return;
-            const pts = (await loadPoints()).filter(p => (p.groupIds||[]).includes(editingGroupId));
-            const cbls = (await loadCables()).filter(c => (c.groupIds||[]).includes(editingGroupId));
-            for (const p of pts) await updatePoint(p.id, { groupIds: p.groupIds.filter(id => id !== editingGroupId) });
-            for (const c of cbls) await updateCable(c.id, { groupIds: c.groupIds.filter(id => id !== editingGroupId) });
+            const pts = (await loadPoints()).filter(p => (p.groupids||[]).includes(editingGroupId));
+            const cbls = (await loadCables()).filter(c => (c.groupids||[]).includes(editingGroupId));
+            for (const p of pts) await updatePoint(p.id, { groupids: p.groupids.filter(id => id !== editingGroupId) });
+            for (const c of cbls) await updateCable(c.id, { groupids: c.groupids.filter(id => id !== editingGroupId) });
             await deleteGroup(editingGroupId);
             closeGroupModal();
             if (document.getElementById('objects-panel').classList.contains('show')) renderObjectList(document.getElementById('search-input').value);
@@ -1047,8 +802,8 @@
             const term = filter.toLowerCase();
             const groupMap = new Map(); groups.forEach(g => groupMap.set(g.id, { group: g, points: [], cables: [] }));
             const noGroupP = [], noGroupC = [];
-            points.forEach(p => { const gIds = p.groupIds||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.points.push(p)) : noGroupP.push(p); });
-            cables.forEach(c => { const gIds = c.groupIds||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.cables.push(c)) : noGroupC.push(c); });
+            points.forEach(p => { const gIds = p.groupids||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.points.push(p)) : noGroupP.push(p); });
+            cables.forEach(c => { const gIds = c.groupids||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.cables.push(c)) : noGroupC.push(c); });
 
             function itemElement(item, isCable) {
                 const div = document.createElement('div'); div.className = 'object-item';
@@ -1069,7 +824,7 @@
                 fc.sort((a,b) => (a.title||'').localeCompare(b.title||'','uk')).forEach(c => ch.appendChild(itemElement(c,true)));
                 gDiv.querySelector('.group-info').addEventListener('click', (e) => { e.stopPropagation(); ch.classList.toggle('open'); gDiv.classList.toggle('open'); });
                 gDiv.querySelector('.edit-group').addEventListener('click', (e) => { e.stopPropagation(); openGroupModal(group); });
-                gDiv.querySelector('.delete-group').addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Видалити групу "${group.name}"?`)) { for (const p of gp) await updatePoint(p.id, { groupIds: p.groupIds.filter(id => id !== group.id) }); for (const c of gc) await updateCable(c.id, { groupIds: c.groupIds.filter(id => id !== group.id) }); await deleteGroup(group.id); renderObjectList(filter); } });
+                gDiv.querySelector('.delete-group').addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Видалити групу "${group.name}"?`)) { for (const p of gp) await updatePoint(p.id, { groupids: p.groupids.filter(id => id !== group.id) }); for (const c of gc) await updateCable(c.id, { groupids: c.groupids.filter(id => id !== group.id) }); await deleteGroup(group.id); renderObjectList(filter); } });
                 list.append(gDiv, ch);
                 if (term && group.name.toLowerCase().includes(term)) { ch.classList.add('open'); gDiv.classList.add('open'); }
             }
