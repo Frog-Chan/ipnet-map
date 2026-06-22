@@ -474,7 +474,7 @@
             if (cablesLines.has(cable.id)) return;
             const latlngs = cable.coordinates.map(c => [c[1], c[0]]);
             const displayWeight = getWeightForZoom(cable.weight || 3);
-            const visible = L.polyline(latlngs, { color: cable.color, weight: Math.round(displayWeight), dashArray: cable.dasharray || null, interactive: false }).addTo(map);
+            const visible = L.polyline(latlngs, { color: cable.color, weight: Math.round(displayWeight), dashArray: cable.dash_array || null, interactive: false }).addTo(map);
             const hitbox = L.polyline(latlngs, { color: 'transparent', weight: 20, opacity: 0, interactive: true }).addTo(map);
             hitbox.on('click', (e) => { if (isDrawing) return; L.DomEvent.stopPropagation(e); handleCableClick(cable.id, e.originalEvent); });
             cablesLines.set(cable.id, { visible, hitbox });
@@ -573,7 +573,7 @@
         function createPointPopupContent(point) {
             const container = document.createElement('div');
             container.style.cssText = 'min-width:260px;max-width:320px;';
-            const selectedIds = point.groupids || [];
+            const selectedIds = point.group_ids || [];
             container.innerHTML = `
                 <h4 style="margin:0 0 8px;font-size:1.1rem;">${escHtml(point.title) || 'Точка'}</h4>
                 <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Тип</label><select class="popup-type" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">${Object.keys(icons).map(t => `<option value="${t}" ${point.type===t?'selected':''}>${icons[t].html} ${t}</option>`).join('')}</select></div>
@@ -594,8 +594,8 @@
                 const title = container.querySelector('.popup-title').value;
                 const notes = container.querySelector('.popup-notes').value;
                 const checkboxes = container.querySelectorAll('.group-checkboxes input[type="checkbox"]:checked');
-                const groupids = Array.from(checkboxes).map(cb => cb.value);
-                await updatePoint(point.id, { type, title, notes, groupids });
+                const group_ids = Array.from(checkboxes).map(cb => cb.value);
+                await updatePoint(point.id, { type, title, notes, group_ids });
                 pointsMarkers.get(point.id)?.closePopup();
             };
             container.querySelector('.popup-delete').onclick = async () => {
@@ -608,14 +608,14 @@
             const container = document.createElement('div');
             container.style.cssText = 'min-width:260px;max-width:320px;';
             const dashOptions = [{ v:'', l:'Суцільна' },{ v:'10,10', l:'Штрих' },{ v:'5,5', l:'Пунктир' },{ v:'15,5,2,5', l:'Штрих-пунктир' }];
-            const selectedIds = cable.groupids || [];
+            const selectedIds = cable.group_ids || [];
             const midCoord = cable.coordinates[Math.floor(cable.coordinates.length/2)];
             const midLatLng = midCoord ? `${midCoord[1].toFixed(6)}, ${midCoord[0].toFixed(6)}` : '';
             container.innerHTML = `
                 <h4 style="margin:0 0 8px;font-size:1.1rem;">${escHtml(cable.title) || 'Кабель'}</h4>
                 <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Назва</label><input class="popup-title" value="${escHtml(cable.title||'')}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;"></div>
                 <div style="display:flex;gap:8px;margin-bottom:8px;"><div style="flex:1;"><label style="font-size:0.8rem;color:#94a3b8;">Колір</label><input type="color" class="popup-color" value="${cable.color}" style="width:100%;height:40px;border-radius:8px;border:1px solid #cbd5e1;margin-top:2px;"></div><div style="flex:1;"><label style="font-size:0.8rem;color:#94a3b8;">Товщина</label><input type="range" class="popup-weight" min="1" max="10" value="${cable.weight || 3}" style="width:100%;margin-top:2px;"></div></div>
-                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Стиль лінії</label><select class="popup-dash" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">${dashOptions.map(o => `<option value="${o.v}" ${(cable.dasharray||'')===o.v?'selected':''}>${o.l}</option>`).join('')}</select></div>
+                <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Стиль лінії</label><select class="popup-dash" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;">${dashOptions.map(o => `<option value="${o.v}" ${(cable.dash_array||'')===o.v?'selected':''}>${o.l}</option>`).join('')}</select></div>
                 <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;margin-top:2px;"><div class="group-checkboxes" style="max-height:120px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:4px 8px;margin-top:4px;"></div></div>
                 <div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Нотатки</label><textarea class="popup-notes" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid #cbd5e1;font-size:0.9rem;margin-top:2px;resize:vertical;">${escHtml(cable.notes||'')}</textarea></div>
                 ${midCoord ? `<div style="margin-bottom:8px;"><label style="font-size:0.8rem;color:#94a3b8;">Координати (середина кабелю)</label><div style="display:flex;gap:6px;align-items:center;margin-top:2px;"><input class="popup-coords" value="${midLatLng}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.85rem;background:#f8fafc;"><button class="copy-coords-btn" style="padding:6px 10px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:bold;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${midLatLng}" target="_blank" style="font-size:0.8rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a></div>` : ''}
@@ -632,11 +632,11 @@
                 const title = container.querySelector('.popup-title').value;
                 const color = container.querySelector('.popup-color').value;
                 const weight = +container.querySelector('.popup-weight').value;
-                const dasharray = container.querySelector('.popup-dash').value;
+                const dash_array = container.querySelector('.popup-dash').value;
                 const notes = container.querySelector('.popup-notes').value;
                 const checkboxes = container.querySelectorAll('.group-checkboxes input[type="checkbox"]:checked');
-                const groupids = Array.from(checkboxes).map(cb => cb.value);
-                await updateCable(cable.id, { title, color, weight, dasharray, notes, groupids });
+                const group_ids = Array.from(checkboxes).map(cb => cb.value);
+                await updateCable(cable.id, { title, color, weight, dash_array, notes, group_ids });
                 cablesLines.get(cable.id)?.hitbox.closePopup();
             };
             container.querySelector('.popup-delete').onclick = async () => {
@@ -686,7 +686,7 @@
                     const { lat, lng } = e.latlng;
                     pendingLineCoords.push([lat, lng]);
                     if (pendingPolyline) pendingPolyline.addLatLng([lat, lng]);
-                    else pendingPolyline = L.polyline([[lat, lng]], { color: currentColor, weight: currentWeight, dasharray: currentDashArray }).addTo(map);
+                    else pendingPolyline = L.polyline([[lat, lng]], { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map);
                 };
                 map.on('click', mapClickHandler);
             }
@@ -696,7 +696,7 @@
             if (activeDrawType !== 'polyline' || pendingLineCoords.length < 2) { alert('Потрібно щонайменше дві вершини.'); return; }
             const simplified = simplifyLine(pendingLineCoords, 0.00002);
             map.removeLayer(pendingPolyline);
-            pendingPolyline = L.polyline(simplified, { color: currentColor, weight: currentWeight, dasharray: currentDashArray }).addTo(map);
+            pendingPolyline = L.polyline(simplified, { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map);
             pendingLineCoords = simplified; pendingLayer = pendingPolyline; pendingType = 'polyline';
             pendingPolyline = null; pendingLineCoords = [];
             showConfirmPanel(); cancelDrawing();
@@ -729,7 +729,7 @@
         function undoLastVertex() {
             if (activeDrawType !== 'polyline' || !pendingPolyline || pendingLineCoords.length === 0) return;
             pendingLineCoords.pop(); map.removeLayer(pendingPolyline);
-            pendingPolyline = pendingLineCoords.length > 0 ? L.polyline(pendingLineCoords, { color: currentColor, weight: currentWeight, dasharray: currentDashArray }).addTo(map) : null;
+            pendingPolyline = pendingLineCoords.length > 0 ? L.polyline(pendingLineCoords, { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map) : null;
         }
 
         function showConfirmPanel() { document.getElementById('confirm-panel').classList.add('show'); }
@@ -739,12 +739,12 @@
             if (!pendingLayer || !pendingType) return;
             if (pendingType === 'marker') {
                 const { lat, lng } = pendingLayer.getLatLng();
-                await savePoint({ type: currentMarkerType, title:'', notes:'', groupids:[], lat, lng });
+                await savePoint({ type: currentMarkerType, title:'', notes:'', group_ids:[], lat, lng });
             } else {
                 const latlngs = pendingLayer.getLatLngs();
                 let coords = latlngs.map(ll => [ll.lng, ll.lat]);
                 coords = await snapCoordinates(coords);
-                await saveCable({ title:'', color:currentColor, weight:currentWeight, dasharray:currentDashArray, notes:'', groupids:[], coordinates:coords });
+                await saveCable({ title:'', color:currentColor, weight:currentWeight, dash_array:currentDashArray, notes:'', group_ids:[], coordinates:coords });
             }
             map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null;
             hideConfirmPanel(); isDrawing = false;
@@ -787,10 +787,10 @@
         async function deleteGroupFromModal() {
             if (!editingGroupId) return;
             if (!confirm('Видалити групу? Об\'єкти залишаться без неї.')) return;
-            const pts = (await loadPoints()).filter(p => (p.groupids||[]).includes(editingGroupId));
-            const cbls = (await loadCables()).filter(c => (c.groupids||[]).includes(editingGroupId));
-            for (const p of pts) await updatePoint(p.id, { groupids: p.groupids.filter(id => id !== editingGroupId) });
-            for (const c of cbls) await updateCable(c.id, { groupids: c.groupids.filter(id => id !== editingGroupId) });
+            const pts = (await loadPoints()).filter(p => (p.group_ids||[]).includes(editingGroupId));
+            const cbls = (await loadCables()).filter(c => (c.group_ids||[]).includes(editingGroupId));
+            for (const p of pts) await updatePoint(p.id, { group_ids: p.group_ids.filter(id => id !== editingGroupId) });
+            for (const c of cbls) await updateCable(c.id, { group_ids: c.group_ids.filter(id => id !== editingGroupId) });
             await deleteGroup(editingGroupId);
             closeGroupModal();
             if (document.getElementById('objects-panel').classList.contains('show')) renderObjectList(document.getElementById('search-input').value);
@@ -802,8 +802,8 @@
             const term = filter.toLowerCase();
             const groupMap = new Map(); groups.forEach(g => groupMap.set(g.id, { group: g, points: [], cables: [] }));
             const noGroupP = [], noGroupC = [];
-            points.forEach(p => { const gIds = p.groupids||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.points.push(p)) : noGroupP.push(p); });
-            cables.forEach(c => { const gIds = c.groupids||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.cables.push(c)) : noGroupC.push(c); });
+            points.forEach(p => { const gIds = p.group_ids||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.points.push(p)) : noGroupP.push(p); });
+            cables.forEach(c => { const gIds = c.group_ids||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.cables.push(c)) : noGroupC.push(c); });
 
             function itemElement(item, isCable) {
                 const div = document.createElement('div'); div.className = 'object-item';
@@ -824,7 +824,7 @@
                 fc.sort((a,b) => (a.title||'').localeCompare(b.title||'','uk')).forEach(c => ch.appendChild(itemElement(c,true)));
                 gDiv.querySelector('.group-info').addEventListener('click', (e) => { e.stopPropagation(); ch.classList.toggle('open'); gDiv.classList.toggle('open'); });
                 gDiv.querySelector('.edit-group').addEventListener('click', (e) => { e.stopPropagation(); openGroupModal(group); });
-                gDiv.querySelector('.delete-group').addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Видалити групу "${group.name}"?`)) { for (const p of gp) await updatePoint(p.id, { groupids: p.groupids.filter(id => id !== group.id) }); for (const c of gc) await updateCable(c.id, { groupids: c.groupids.filter(id => id !== group.id) }); await deleteGroup(group.id); renderObjectList(filter); } });
+                gDiv.querySelector('.delete-group').addEventListener('click', async (e) => { e.stopPropagation(); if (confirm(`Видалити групу "${group.name}"?`)) { for (const p of gp) await updatePoint(p.id, { group_ids: p.group_ids.filter(id => id !== group.id) }); for (const c of gc) await updateCable(c.id, { group_ids: c.group_ids.filter(id => id !== group.id) }); await deleteGroup(group.id); renderObjectList(filter); } });
                 list.append(gDiv, ch);
                 if (term && group.name.toLowerCase().includes(term)) { ch.classList.add('open'); gDiv.classList.add('open'); }
             }
