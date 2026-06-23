@@ -2,16 +2,20 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <link rel="manifest" href="/ipnet-map/manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/ipnet-map/service-worker.js');
-    });
-  }
-</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>IP Net – Карта мережі</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/ipnet-map/manifest.json">
+
+    <!-- Реєстрація Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/ipnet-map/service-worker.js');
+        });
+      }
+    </script>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.css" />
@@ -426,7 +430,6 @@
 
     <div id="spider-menu"></div>
 
-    <!-- Модалка для груп -->
     <div class="modal-overlay" id="group-modal">
         <div class="modal">
             <h3 id="group-modal-title">Створити групу</h3>
@@ -439,7 +442,6 @@
         </div>
     </div>
 
-    <!-- Модалка для посилання Google Maps -->
     <div class="modal-overlay" id="gmaps-modal">
         <div class="modal">
             <h3>🔗 Додати з Google Maps</h3>
@@ -458,7 +460,6 @@
         </div>
     </div>
 
-    <!-- Модалка для нотаток -->
     <div id="notes-modal">
         <div class="notes-header">
             <h3>Нотатки</h3>
@@ -476,6 +477,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
 
     <script>
     (function() {
@@ -483,6 +485,11 @@
         const SUPABASE_URL = 'https://fgvjhukykjqxspncaxiv.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndmpodWt5a2pxeHNwbmNheGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNTQ5NjAsImV4cCI6MjA5NzczMDk2MH0.B_mPoR_jLEqnn_UHJmvr4fWfp-sIhRuT65TBitNFmlk';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ========== ЛОКАЛЬНЕ СХОВИЩЕ (localforage) ==========
+        const pointsStore = localforage.createInstance({ name: 'ipnet-points' });
+        const cablesStore = localforage.createInstance({ name: 'ipnet-cables' });
+        const groupsStore = localforage.createInstance({ name: 'ipnet-groups' });
 
         // ========== ЗМІННІ ==========
         let map, satelliteLayer, osmLayer;
@@ -503,7 +510,6 @@
         let mapClickHandler = null;
         let spiderMenuVisible = false;
 
-        // GPS
         let userLocationMarker = null;
 
         // Адаптивні функції
@@ -546,47 +552,95 @@
             location.reload();
         });
 
-        // ========== SUPABASE CRUD ==========
-        async function loadPoints() { const { data } = await supabase.from('points').select('*'); return data || []; }
+        // ========== SUPABASE CRUD (з локальним кешуванням) ==========
+        async function loadPoints() {
+            const local = await pointsStore.getItem('data') || [];
+            try {
+                const { data } = await supabase.from('points').select('*');
+                if (data) {
+                    await pointsStore.setItem('data', data);
+                    return data;
+                }
+            } catch(e) {}
+            return local;
+        }
         async function savePoint(point) {
             const { error } = await supabase.from('points').insert([point]);
             if (error) { alert('Помилка збереження точки: ' + error.message); throw error; }
+            const { data } = await supabase.from('points').select('*');
+            if (data) await pointsStore.setItem('data', data);
         }
         async function updatePoint(id, updates) {
             const { error } = await supabase.from('points').update(updates).eq('id', id);
             if (error) { alert('Помилка оновлення точки: ' + error.message); throw error; }
+            const { data } = await supabase.from('points').select('*');
+            if (data) await pointsStore.setItem('data', data);
         }
         async function deletePoint(id) {
             const { error } = await supabase.from('points').delete().eq('id', id);
             if (error) { alert('Помилка видалення точки: ' + error.message); throw error; }
+            const { data } = await supabase.from('points').select('*');
+            if (data) await pointsStore.setItem('data', data);
         }
 
-        async function loadCables() { const { data } = await supabase.from('cables').select('*'); return data || []; }
+        async function loadCables() {
+            const local = await cablesStore.getItem('data') || [];
+            try {
+                const { data } = await supabase.from('cables').select('*');
+                if (data) {
+                    await cablesStore.setItem('data', data);
+                    return data;
+                }
+            } catch(e) {}
+            return local;
+        }
         async function saveCable(cable) {
             const { error } = await supabase.from('cables').insert([cable]);
             if (error) { alert('Помилка збереження кабелю: ' + error.message); throw error; }
+            const { data } = await supabase.from('cables').select('*');
+            if (data) await cablesStore.setItem('data', data);
         }
         async function updateCable(id, updates) {
             const { error } = await supabase.from('cables').update(updates).eq('id', id);
             if (error) { alert('Помилка оновлення кабелю: ' + error.message); throw error; }
+            const { data } = await supabase.from('cables').select('*');
+            if (data) await cablesStore.setItem('data', data);
         }
         async function deleteCable(id) {
             const { error } = await supabase.from('cables').delete().eq('id', id);
             if (error) { alert('Помилка видалення кабелю: ' + error.message); throw error; }
+            const { data } = await supabase.from('cables').select('*');
+            if (data) await cablesStore.setItem('data', data);
         }
 
-        async function loadGroups() { const { data } = await supabase.from('groups').select('*'); return data || []; }
+        async function loadGroups() {
+            const local = await groupsStore.getItem('data') || [];
+            try {
+                const { data } = await supabase.from('groups').select('*');
+                if (data) {
+                    await groupsStore.setItem('data', data);
+                    return data;
+                }
+            } catch(e) {}
+            return local;
+        }
         async function saveGroup(group) {
             const { error } = await supabase.from('groups').insert([group]);
             if (error) { alert('Помилка збереження групи: ' + error.message); throw error; }
+            const { data } = await supabase.from('groups').select('*');
+            if (data) await groupsStore.setItem('data', data);
         }
         async function updateGroup(id, updates) {
             const { error } = await supabase.from('groups').update(updates).eq('id', id);
             if (error) { alert('Помилка оновлення групи: ' + error.message); throw error; }
+            const { data } = await supabase.from('groups').select('*');
+            if (data) await groupsStore.setItem('data', data);
         }
         async function deleteGroup(id) {
             const { error } = await supabase.from('groups').delete().eq('id', id);
             if (error) { alert('Помилка видалення групи: ' + error.message); throw error; }
+            const { data } = await supabase.from('groups').select('*');
+            if (data) await groupsStore.setItem('data', data);
         }
 
         // ========== REALTIME ==========
@@ -665,14 +719,14 @@
             pointsMarkers.forEach((marker, id) => {
                 supabase.from('points').select('type').eq('id', id).single().then(({ data }) => {
                     if (data) marker.setIcon(createAdaptiveIcon(data.type));
-                });
+                }).catch(() => {});
             });
         }
         function updateAllCableWeights() {
             cablesLines.forEach((obj, id) => {
                 supabase.from('cables').select('weight').eq('id', id).single().then(({ data }) => {
                     if (data) { const dw = getWeightForZoom(data.weight||3); if (obj.visible) obj.visible.setStyle({weight: Math.round(dw)}); }
-                });
+                }).catch(() => {});
             });
         }
         function updateAllDecorators() {
@@ -737,7 +791,7 @@
         }
         async function handleMarkerClick(pointId, originalEvent) {
             if (spiderMenuVisible) { closeSpiderMenu(); return; }
-            const point = (await supabase.from('points').select('*').eq('id', pointId).single()).data;
+            const point = (await loadPoints()).find(p => p.id === pointId);
             if (!point) return;
             const clickLatLng = map.mouseEventToLatLng(originalEvent);
             const nearby = await findNearbyObjects(clickLatLng, pointId, 'point');
@@ -747,7 +801,7 @@
         }
         async function handleCableClick(cableId, originalEvent) {
             if (spiderMenuVisible) { closeSpiderMenu(); return; }
-            const cable = (await supabase.from('cables').select('*').eq('id', cableId).single()).data;
+            const cable = (await loadCables()).find(c => c.id === cableId);
             if (!cable) return;
             const clickLatLng = map.mouseEventToLatLng(originalEvent);
             const nearby = await findNearbyObjects(clickLatLng, cableId, 'cable');
@@ -779,7 +833,7 @@
         }
         function closeSpiderMenu() { const m=document.getElementById('spider-menu'); if (m.style.display!=='none'){m.style.display='none';spiderMenuVisible=false;} }
 
-        // ========== GPS ФУНКЦІЇ ==========
+        // ========== GPS ==========
         function locateUser() {
             if (!navigator.geolocation) {
                 alert('Геолокація не підтримується вашим браузером');
@@ -810,12 +864,10 @@
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
-
         function clearUserLocation() {
             if (userLocationMarker) { map.removeLayer(userLocationMarker); userLocationMarker = null; }
             document.getElementById('btn-clearlocate').style.display = 'none';
         }
-
         document.getElementById('btn-locate').addEventListener('click', locateUser);
         document.getElementById('btn-clearlocate').addEventListener('click', clearUserLocation);
 
@@ -834,7 +886,6 @@
         }
 
         let currentNotesData = { type: null, id: null, field: 'notes' };
-
         function openNotesModal(type, id, currentText, field = 'notes') {
             currentNotesData = { type, id, field };
             const modal = document.getElementById('notes-modal');
@@ -843,25 +894,23 @@
             modal.classList.add('show');
             textarea.focus();
         }
-
         function closeNotesModal() {
             document.getElementById('notes-modal').classList.remove('show');
         }
-
         async function saveNotesFromModal() {
             const { type, id, field } = currentNotesData;
             const newText = document.getElementById('notes-textarea').value;
             try {
                 if (type === 'point') {
                     await updatePoint(id, { [field]: newText });
-                    const point = (await supabase.from('points').select('*').eq('id', id).single()).data;
+                    const point = (await loadPoints()).find(p => p.id === id);
                     if (point) {
                         const marker = pointsMarkers.get(id);
                         if (marker) marker.setPopupContent(createPointPopupContent(point));
                     }
                 } else if (type === 'cable') {
                     await updateCable(id, { [field]: newText });
-                    const cable = (await supabase.from('cables').select('*').eq('id', id).single()).data;
+                    const cable = (await loadCables()).find(c => c.id === id);
                     if (cable) {
                         const line = cablesLines.get(id);
                         if (line) line.hitbox.setPopupContent(createCablePopupContent(cable));
@@ -872,12 +921,11 @@
                 alert('Помилка збереження: ' + e.message);
             }
         }
-
         document.getElementById('notes-close-btn').addEventListener('click', closeNotesModal);
         document.getElementById('notes-cancel-btn').addEventListener('click', closeNotesModal);
         document.getElementById('notes-save-btn').addEventListener('click', saveNotesFromModal);
 
-        // ========== ДОДАВАННЯ З GOOGLE MAPS (ТОЧКА / КАБЕЛЬ) ==========
+        // ========== ДОДАВАННЯ З GOOGLE MAPS ==========
         function parseCoordinates(input) {
             let match = input.match(/^\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*$/);
             if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
@@ -889,7 +937,6 @@
             if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
             return null;
         }
-
         function openGmapsModal() {
             document.getElementById('gmaps-url').value = '';
             document.getElementById('gmaps-modal').classList.add('show');
@@ -898,7 +945,6 @@
         function closeGmapsModal() {
             document.getElementById('gmaps-modal').classList.remove('show');
         }
-
         function getCoordsFromModal() {
             const url = document.getElementById('gmaps-url').value.trim();
             if (!url) { alert('Вставте посилання або координати'); return null; }
@@ -907,7 +953,6 @@
             if (coords.lat < -90 || coords.lat > 90 || coords.lng < -180 || coords.lng > 180) { alert('Координати поза допустимим діапазоном'); return null; }
             return coords;
         }
-
         async function addPointFromGmaps() {
             const coords = getCoordsFromModal();
             if (!coords) return;
@@ -918,16 +963,13 @@
                 map.setView([coords.lat, coords.lng], 18);
             } catch(e) {}
         }
-
         function startCableFromGmaps() {
             const coords = getCoordsFromModal();
             if (!coords) return;
-            // Запускаємо режим малювання кабелю
             closeGmapsModal();
             if (pendingLayer) { alert('Спочатку збережіть або скасуйте попередній об\'єкт.'); return; }
             cancelDrawing();
             startDrawing('polyline');
-            // Програмно додаємо першу вершину
             const { lat, lng } = coords;
             pendingLineCoords.push([lat, lng]);
             pendingPolyline = L.polyline([[lat, lng]], {
@@ -935,7 +977,6 @@
             }).addTo(map);
             map.setView([lat, lng], 18);
         }
-
         document.getElementById('btn-gmaps').addEventListener('click', openGmapsModal);
         document.getElementById('gmaps-add-point').addEventListener('click', addPointFromGmaps);
         document.getElementById('gmaps-add-cable').addEventListener('click', startCableFromGmaps);
