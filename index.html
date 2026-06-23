@@ -365,6 +365,7 @@
     <div id="toolbar">
         <div class="tool-row">
             <button id="btn-marker">📍 Точка</button>
+            <button id="btn-gmaps" title="Вставити посилання Google Maps">🔗 Додати з Google Maps</button>
             <select id="marker-type-select">
                 <option value="server">🖥️ Сервер</option>
                 <option value="muff">🗄️ Муфта</option>
@@ -392,6 +393,10 @@
             <span class="weight-label" id="weight-value">3</span>
         </div>
         <div class="tool-row">
+            <button id="btn-locate">🧭 Моє місце</button>
+            <button id="btn-clearlocate" style="display:none;">❌ Видалити мітку</button>
+        </div>
+        <div class="tool-row">
             <button id="group-btn">📁 Керування групами</button>
             <button id="theme-btn">🌓 Тема</button>
             <button id="logout-btn" style="background:#7f1d1d;">🚪 Вийти</button>
@@ -413,6 +418,7 @@
 
     <div id="spider-menu"></div>
 
+    <!-- Модалка для груп -->
     <div class="modal-overlay" id="group-modal">
         <div class="modal">
             <h3 id="group-modal-title">Створити групу</h3>
@@ -421,6 +427,24 @@
                 <button class="btn-danger" id="group-delete" style="display:none;">🗑️ Видалити</button>
                 <button class="btn-secondary" id="group-cancel">Скасувати</button>
                 <button class="btn-primary" id="group-save">Зберегти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка для посилання Google Maps -->
+    <div class="modal-overlay" id="gmaps-modal">
+        <div class="modal">
+            <h3>🔗 Додати точку з Google Maps</h3>
+            <input type="text" id="gmaps-url" placeholder="Вставте посилання Google Maps або координати" style="margin-bottom:12px;">
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:16px;">
+                Підтримуються формати:<br>
+                • https://www.google.com/maps?q=49.5369,26.2106<br>
+                • https://maps.app.goo.gl/... (відкриється координатами)<br>
+                • 49.5369, 26.2106
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn-secondary" id="gmaps-cancel">Скасувати</button>
+                <button class="btn-primary" id="gmaps-add">Додати точку</button>
             </div>
         </div>
     </div>
@@ -470,7 +494,10 @@
         let mapClickHandler = null;
         let spiderMenuVisible = false;
 
-        // ========== АДАПТИВНІ ФУНКЦІЇ ==========
+        // GPS
+        let userLocationMarker = null;
+
+        // Адаптивні функції
         function getIconSize() { const z = map ? map.getZoom() : 14; return z >= 16 ? 32 : z >= 14 ? 26 : z >= 12 ? 20 : 16; }
         function getWeightForZoom(bw) { const z = map ? map.getZoom() : 14; return z >= 16 ? bw : z >= 14 ? Math.max(2, bw*0.8) : z >= 12 ? Math.max(1.5, bw*0.6) : Math.max(1, bw*0.4); }
         function getArrowSize() { const z = map ? map.getZoom() : 14; return z >= 16 ? 10 : z >= 15 ? 8 : z >= 14 ? 6 : 0; }
@@ -743,6 +770,52 @@
         }
         function closeSpiderMenu() { const m=document.getElementById('spider-menu'); if (m.style.display!=='none'){m.style.display='none';spiderMenuVisible=false;} }
 
+        // ========== GPS ФУНКЦІЇ ==========
+        function locateUser() {
+            if (!navigator.geolocation) {
+                alert('Геолокація не підтримується вашим браузером');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    map.setView([latitude, longitude], 16);
+                    // Видалити старий маркер, якщо є
+                    if (userLocationMarker) {
+                        map.removeLayer(userLocationMarker);
+                    }
+                    userLocationMarker = L.circleMarker([latitude, longitude], {
+                        radius: 9,
+                        fillColor: '#3b82f6',
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map).bindPopup('📍 Ви тут').openPopup();
+                    document.getElementById('btn-clearlocate').style.display = 'inline-flex';
+                },
+                (error) => {
+                    let msg = 'Помилка визначення місцезнаходження.';
+                    if (error.code === error.PERMISSION_DENIED) msg = 'Доступ до геолокації заборонено. Дозвольте в налаштуваннях браузера.';
+                    else if (error.code === error.POSITION_UNAVAILABLE) msg = 'Інформація про місцезнаходження недоступна.';
+                    else if (error.code === error.TIMEOUT) msg = 'Час очікування вичерпано.';
+                    alert(msg);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function clearUserLocation() {
+            if (userLocationMarker) {
+                map.removeLayer(userLocationMarker);
+                userLocationMarker = null;
+            }
+            document.getElementById('btn-clearlocate').style.display = 'none';
+        }
+
+        document.getElementById('btn-locate').addEventListener('click', locateUser);
+        document.getElementById('btn-clearlocate').addEventListener('click', clearUserLocation);
+
         // ========== ПОПАПИ ==========
         async function createGroupCheckboxes(selectedIds, term='') {
             const groups = await loadGroups();
@@ -801,6 +874,45 @@
         document.getElementById('notes-cancel-btn').addEventListener('click', closeNotesModal);
         document.getElementById('notes-save-btn').addEventListener('click', saveNotesFromModal);
 
+        // ========== ФУНКЦІЯ ДОДАВАННЯ ТОЧКИ З GOOGLE MAPS ==========
+        function parseCoordinates(input) {
+            let match = input.match(/^\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*$/);
+            if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+            match = input.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+            if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+            match = input.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*),\d+z/);
+            if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+            match = input.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/);
+            if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+            return null;
+        }
+
+        function openGmapsModal() {
+            document.getElementById('gmaps-url').value = '';
+            document.getElementById('gmaps-modal').classList.add('show');
+            document.getElementById('gmaps-url').focus();
+        }
+        function closeGmapsModal() {
+            document.getElementById('gmaps-modal').classList.remove('show');
+        }
+        async function addPointFromGmaps() {
+            const url = document.getElementById('gmaps-url').value.trim();
+            if (!url) { alert('Вставте посилання або координати'); return; }
+            const coords = parseCoordinates(url);
+            if (!coords) { alert('Не вдалося розпізнати координати.'); return; }
+            if (coords.lat < -90 || coords.lat > 90 || coords.lng < -180 || coords.lng > 180) { alert('Координати поза допустимим діапазоном'); return; }
+            try {
+                currentMarkerType = document.getElementById('marker-type-select').value;
+                await savePoint({ type: currentMarkerType, title:'', notes:'', photo_url:'', group_ids:[], lat: coords.lat, lng: coords.lng });
+                closeGmapsModal();
+                map.setView([coords.lat, coords.lng], 18);
+            } catch(e) {}
+        }
+
+        document.getElementById('btn-gmaps').addEventListener('click', openGmapsModal);
+        document.getElementById('gmaps-add').addEventListener('click', addPointFromGmaps);
+        document.getElementById('gmaps-cancel').addEventListener('click', closeGmapsModal);
+
         function createPointPopupContent(point) {
             const container = document.createElement('div');
             container.style.cssText = 'min-width:260px;max-width:320px;color:var(--popup-text);';
@@ -833,15 +945,10 @@
                 const photo_url = container.querySelector('.popup-photo').value;
                 const cbs = container.querySelectorAll('.group-checkboxes input[type="checkbox"]:checked');
                 const group_ids = Array.from(cbs).map(cb => cb.value);
-                try {
-                    await updatePoint(point.id, { type, title, notes, photo_url, group_ids });
-                    pointsMarkers.get(point.id)?.closePopup();
-                } catch(e) {}
+                try { await updatePoint(point.id, { type, title, notes, photo_url, group_ids }); pointsMarkers.get(point.id)?.closePopup(); } catch(e) {}
             };
             container.querySelector('.popup-delete').onclick = async () => {
-                if (confirm('Видалити цю точку?')) {
-                    try { await deletePoint(point.id); pointsMarkers.get(point.id)?.closePopup(); } catch(e) {}
-                }
+                if (confirm('Видалити цю точку?')) { try { await deletePoint(point.id); pointsMarkers.get(point.id)?.closePopup(); } catch(e) {} }
             };
             container.querySelector('.notes-expand-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -890,15 +997,10 @@
                 const photo_url = container.querySelector('.popup-photo').value;
                 const cbs = container.querySelectorAll('.group-checkboxes input[type="checkbox"]:checked');
                 const group_ids = Array.from(cbs).map(cb => cb.value);
-                try {
-                    await updateCable(cable.id, { title, color, weight, dash_array, notes, photo_url, group_ids });
-                    cablesLines.get(cable.id)?.hitbox.closePopup();
-                } catch(e) {}
+                try { await updateCable(cable.id, { title, color, weight, dash_array, notes, photo_url, group_ids }); cablesLines.get(cable.id)?.hitbox.closePopup(); } catch(e) {}
             };
             container.querySelector('.popup-delete').onclick = async () => {
-                if (confirm('Видалити цей кабель?')) {
-                    try { await deleteCable(cable.id); cablesLines.get(cable.id)?.hitbox.closePopup(); } catch(e) {}
-                }
+                if (confirm('Видалити цей кабель?')) { try { await deleteCable(cable.id); cablesLines.get(cable.id)?.hitbox.closePopup(); } catch(e) {} }
             };
             container.querySelector('.notes-expand-btn').addEventListener('click', (e) => {
                 e.stopPropagation();
