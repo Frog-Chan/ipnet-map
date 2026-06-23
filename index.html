@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>IP Net – Карта мережі</title>
 
+    <!-- PWA -->
     <link rel="manifest" href="/ipnet-map/manifest.json">
     <script>
       if ('serviceWorker' in navigator) {
@@ -479,39 +480,32 @@
 
     <script>
     (function() {
-        // ========== КОНФІГУРАЦІЯ SUPABASE ==========
         const SUPABASE_URL = 'https://fgvjhukykjqxspncaxiv.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZndmpodWt5a2pxeHNwbmNheGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxNTQ5NjAsImV4cCI6MjA5NzczMDk2MH0.B_mPoR_jLEqnn_UHJmvr4fWfp-sIhRuT65TBitNFmlk';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ========== ЛОКАЛЬНЕ СХОВИЩЕ (localforage) ==========
         const pointsStore = localforage.createInstance({ name: 'ipnet-points' });
         const cablesStore = localforage.createInstance({ name: 'ipnet-cables' });
         const groupsStore = localforage.createInstance({ name: 'ipnet-groups' });
 
-        // ========== ЗМІННІ ==========
         let map, satelliteLayer, osmLayer;
         const pointsMarkers = new Map();
         const cablesLines = new Map();
-
         let isDrawing = false;
         let activeDrawType = null;
         let currentColor = '#ff0000';
         let currentWeight = 3;
         let currentDashArray = null;
         let currentMarkerType = 'server';
-
         let pendingLayer = null;
         let pendingType = null;
         let pendingLineCoords = [];
         let pendingPolyline = null;
         let mapClickHandler = null;
         let spiderMenuVisible = false;
-
         let userLocationMarker = null;
         let deferredPrompt;
 
-        // Адаптивні функції
         function getIconSize() { const z = map ? map.getZoom() : 14; return z >= 16 ? 32 : z >= 14 ? 26 : z >= 12 ? 20 : 16; }
         function getWeightForZoom(bw) { const z = map ? map.getZoom() : 14; return z >= 16 ? bw : z >= 14 ? Math.max(2, bw*0.8) : z >= 12 ? Math.max(1.5, bw*0.6) : Math.max(1, bw*0.4); }
         function getArrowSize() { const z = map ? map.getZoom() : 14; return z >= 16 ? 10 : z >= 15 ? 8 : z >= 14 ? 6 : 0; }
@@ -522,7 +516,6 @@
             pole: {html:'🏗️'}, manhole: {html:'🕳️'}, antenna: {html:'📡'}, cabinet: {html:'🗄️'}
         };
 
-        // ========== PWA Install ==========
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -532,33 +525,24 @@
             if (!deferredPrompt) return;
             deferredPrompt.prompt();
             const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                document.getElementById('install-btn').style.display = 'none';
-            }
+            if (outcome === 'accepted') document.getElementById('install-btn').style.display = 'none';
             deferredPrompt = null;
         });
 
-        // ========== АВТОРИЗАЦІЯ ==========
         const loginScreen = document.getElementById('login-screen');
         const loginError = document.getElementById('login-error');
-
         async function checkSession() {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) showMap();
-                else loginScreen.style.display = 'flex';
-            } catch(e) {
-                showMap();
-            }
+            } catch(e) { showMap(); }
         }
-
         function showMap() {
             loginScreen.style.display = 'none';
             document.getElementById('fab-tools').style.display = 'flex';
             document.getElementById('fab-list').style.display = 'flex';
             if (!map) initMap();
         }
-
         document.getElementById('login-btn').addEventListener('click', async () => {
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
@@ -566,34 +550,17 @@
             if (error) loginError.textContent = '❌ Невірний email або пароль';
             else showMap();
         });
-
         document.getElementById('logout-btn').addEventListener('click', async () => {
             await supabase.auth.signOut();
             location.reload();
         });
 
-        // ========== ФУНКЦІЯ БЛОКУВАННЯ ІНТЕРАКТИВНОСТІ ==========
-        function setAllInteractive(enabled) {
-            pointsMarkers.forEach(marker => {
-                if (marker) marker.setInteractive(enabled);
-            });
-            cablesLines.forEach(obj => {
-                if (obj && obj.hitbox) obj.hitbox.setInteractive(enabled);
-            });
-            if (userLocationMarker) {
-                userLocationMarker.setInteractive(enabled);
-            }
-        }
-
-        // ========== SUPABASE CRUD (з локальним кешуванням) ==========
+        // CRUD з кешуванням
         async function loadPoints() {
             const local = await pointsStore.getItem('data') || [];
             try {
                 const { data } = await supabase.from('points').select('*');
-                if (data) {
-                    await pointsStore.setItem('data', data);
-                    return data;
-                }
+                if (data) { await pointsStore.setItem('data', data); return data; }
             } catch(e) {}
             return local;
         }
@@ -615,15 +582,11 @@
             const { data } = await supabase.from('points').select('*');
             if (data) await pointsStore.setItem('data', data);
         }
-
         async function loadCables() {
             const local = await cablesStore.getItem('data') || [];
             try {
                 const { data } = await supabase.from('cables').select('*');
-                if (data) {
-                    await cablesStore.setItem('data', data);
-                    return data;
-                }
+                if (data) { await cablesStore.setItem('data', data); return data; }
             } catch(e) {}
             return local;
         }
@@ -645,15 +608,11 @@
             const { data } = await supabase.from('cables').select('*');
             if (data) await cablesStore.setItem('data', data);
         }
-
         async function loadGroups() {
             const local = await groupsStore.getItem('data') || [];
             try {
                 const { data } = await supabase.from('groups').select('*');
-                if (data) {
-                    await groupsStore.setItem('data', data);
-                    return data;
-                }
+                if (data) { await groupsStore.setItem('data', data); return data; }
             } catch(e) {}
             return local;
         }
@@ -676,7 +635,6 @@
             if (data) await groupsStore.setItem('data', data);
         }
 
-        // ========== REALTIME ==========
         function subscribeToRealtime() {
             supabase.channel('points-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'points' }, (payload) => {
@@ -690,7 +648,6 @@
                         if (m) { map.removeLayer(m); pointsMarkers.delete(payload.old.id); }
                     }
                 }).subscribe();
-
             supabase.channel('cables-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'cables' }, (payload) => {
                     if (payload.eventType === 'INSERT') addCableToMap(payload.new);
@@ -703,7 +660,6 @@
                         if (obj) { map.removeLayer(obj.visible); map.removeLayer(obj.hitbox); if (obj.decorator) map.removeLayer(obj.decorator); cablesLines.delete(payload.old.id); }
                     }
                 }).subscribe();
-
             supabase.channel('groups-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'groups' }, () => {
                     if (document.getElementById('objects-panel').classList.contains('show')) {
@@ -712,35 +668,21 @@
                 }).subscribe();
         }
 
-        // ========== КАРТА ==========
         function initMap() {
             map = L.map('map', { center: [49.5369, 26.2106], zoom: 14, zoomControl: true, maxZoom: 22, attributionControl: true });
-
-            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles © Esri', maxNativeZoom: 19, maxZoom: 22
-            });
-            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap, CartoDB', maxNativeZoom: 19, maxZoom: 22, pane: 'overlayPane'
-            });
-            osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap', maxNativeZoom: 19, maxZoom: 22
-            });
-
+            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxNativeZoom: 19, maxZoom: 22 });
+            const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, CartoDB', maxNativeZoom: 19, maxZoom: 22, pane: 'overlayPane' });
+            osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxNativeZoom: 19, maxZoom: 22 });
             map.addLayer(satelliteLayer);
             map.addLayer(labels);
-
-            const baseMaps = { "Супутник + підписи": satelliteLayer, "Кольорова OSM": osmLayer };
-            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
-
+            L.control.layers({ "Супутник + підписи": satelliteLayer, "Кольорова OSM": osmLayer }, null, { position: 'topright' }).addTo(map);
             map.on('baselayerchange', function(e) {
                 map.setMaxZoom(e.layer === satelliteLayer ? 18 : 22);
                 if (e.layer === satelliteLayer && map.getZoom() > 18) map.setZoom(18);
             });
             map.setMaxZoom(18);
-
             map.on('zoomend', () => { updateAllMarkerIcons(); updateAllCableWeights(); updateAllDecorators(); });
             map.on('click', () => { closeSpiderMenu(); document.getElementById('toolbar').classList.remove('show'); });
-
             (async () => {
                 const points = await loadPoints(); points.forEach(addPointToMap);
                 const cables = await loadCables(); cables.forEach(addCableToMap);
@@ -786,19 +728,16 @@
             const latlngs = cable.coordinates.map(c => [c[1], c[0]]);
             const dw = getWeightForZoom(cable.weight || 3);
             const visible = L.polyline(latlngs, { color: cable.color, weight: Math.round(dw), dashArray: cable.dash_array || null, interactive: false }).addTo(map);
-
             const arrowSize = getArrowSize();
             const patterns = arrowSize > 0 ? [{ offset: '50px', repeat: '200px', symbol: L.Symbol.arrowHead({ pixelSize: arrowSize, polygon: false, pathOptions: { stroke: true, color: cable.color, weight: 2, opacity: 0.9 } }) }] : [];
             const decorator = L.polylineDecorator(visible, { patterns }).addTo(map);
-
             const hitbox = L.polyline(latlngs, { color: 'transparent', weight: 20, opacity: 0, interactive: true }).addTo(map);
             hitbox.bindPopup(() => createCablePopupContent(cable));
             hitbox.on('click', (e) => { if (isDrawing) return; L.DomEvent.stopPropagation(e); handleCableClick(cable.id, e.originalEvent); });
-
             cablesLines.set(cable.id, { visible, hitbox, decorator });
         }
 
-        // ========== ОБРОБКА КЛІКІВ ==========
+        // Обробка кліків з spider
         function distanceToSegmentSq(latlng, segStart, segEnd) {
             const [x,y]=[latlng.lng,latlng.lat], [x1,y1]=segStart, [x2,y2]=segEnd;
             const dx=x2-x1, dy=y2-y1, lsq=dx*dx+dy*dy;
@@ -866,25 +805,16 @@
         }
         function closeSpiderMenu() { const m=document.getElementById('spider-menu'); if (m.style.display!=='none'){m.style.display='none';spiderMenuVisible=false;} }
 
-        // ========== GPS ==========
+        // GPS
         function locateUser() {
-            if (!navigator.geolocation) {
-                alert('Геолокація не підтримується вашим браузером');
-                return;
-            }
+            if (!navigator.geolocation) { alert('Геолокація не підтримується вашим браузером'); return; }
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     map.setView([latitude, longitude], 16);
                     if (userLocationMarker) { map.removeLayer(userLocationMarker); }
                     userLocationMarker = L.circleMarker([latitude, longitude], {
-                        radius: 9,
-                        fillColor: '#3b82f6',
-                        color: '#ffffff',
-                        weight: 2,
-                        opacity: 1,
-                        fillOpacity: 0.8,
-                        interactive: true
+                        radius: 9, fillColor: '#3b82f6', color: '#ffffff', weight: 2, opacity: 1, fillOpacity: 0.8, interactive: true
                     }).addTo(map).bindPopup('📍 Ви тут').openPopup();
                     document.getElementById('btn-clearlocate').style.display = 'inline-flex';
                 },
@@ -905,7 +835,7 @@
         document.getElementById('btn-locate').addEventListener('click', locateUser);
         document.getElementById('btn-clearlocate').addEventListener('click', clearUserLocation);
 
-        // ========== ПОПАПИ ==========
+        // Попапи
         async function createGroupCheckboxes(selectedIds, term='') {
             const groups = await loadGroups();
             const t = term.toLowerCase();
@@ -918,19 +848,14 @@
                 </label>
             `).join('');
         }
-
         let currentNotesData = { type: null, id: null, field: 'notes' };
         function openNotesModal(type, id, currentText, field = 'notes') {
             currentNotesData = { type, id, field };
-            const modal = document.getElementById('notes-modal');
-            const textarea = document.getElementById('notes-textarea');
-            textarea.value = currentText || '';
-            modal.classList.add('show');
-            textarea.focus();
+            document.getElementById('notes-textarea').value = currentText || '';
+            document.getElementById('notes-modal').classList.add('show');
+            document.getElementById('notes-textarea').focus();
         }
-        function closeNotesModal() {
-            document.getElementById('notes-modal').classList.remove('show');
-        }
+        function closeNotesModal() { document.getElementById('notes-modal').classList.remove('show'); }
         async function saveNotesFromModal() {
             const { type, id, field } = currentNotesData;
             const newText = document.getElementById('notes-textarea').value;
@@ -938,28 +863,20 @@
                 if (type === 'point') {
                     await updatePoint(id, { [field]: newText });
                     const point = (await loadPoints()).find(p => p.id === id);
-                    if (point) {
-                        const marker = pointsMarkers.get(id);
-                        if (marker) marker.setPopupContent(createPointPopupContent(point));
-                    }
+                    if (point) { const marker = pointsMarkers.get(id); if (marker) marker.setPopupContent(createPointPopupContent(point)); }
                 } else if (type === 'cable') {
                     await updateCable(id, { [field]: newText });
                     const cable = (await loadCables()).find(c => c.id === id);
-                    if (cable) {
-                        const line = cablesLines.get(id);
-                        if (line) line.hitbox.setPopupContent(createCablePopupContent(cable));
-                    }
+                    if (cable) { const line = cablesLines.get(id); if (line) line.hitbox.setPopupContent(createCablePopupContent(cable)); }
                 }
                 closeNotesModal();
-            } catch(e) {
-                alert('Помилка збереження: ' + e.message);
-            }
+            } catch(e) { alert('Помилка збереження: ' + e.message); }
         }
         document.getElementById('notes-close-btn').addEventListener('click', closeNotesModal);
         document.getElementById('notes-cancel-btn').addEventListener('click', closeNotesModal);
         document.getElementById('notes-save-btn').addEventListener('click', saveNotesFromModal);
 
-        // ========== ДОДАВАННЯ З GOOGLE MAPS ==========
+        // Google Maps
         function parseCoordinates(input) {
             let match = input.match(/^\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*$/);
             if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
@@ -976,9 +893,7 @@
             document.getElementById('gmaps-modal').classList.add('show');
             document.getElementById('gmaps-url').focus();
         }
-        function closeGmapsModal() {
-            document.getElementById('gmaps-modal').classList.remove('show');
-        }
+        function closeGmapsModal() { document.getElementById('gmaps-modal').classList.remove('show'); }
         function getCoordsFromModal() {
             const url = document.getElementById('gmaps-url').value.trim();
             if (!url) { alert('Вставте посилання або координати'); return null; }
@@ -1006,9 +921,7 @@
             startDrawing('polyline');
             const { lat, lng } = coords;
             pendingLineCoords.push([lat, lng]);
-            pendingPolyline = L.polyline([[lat, lng]], {
-                color: currentColor, weight: currentWeight, dashArray: currentDashArray
-            }).addTo(map);
+            pendingPolyline = L.polyline([[lat, lng]], { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map);
             map.setView([lat, lng], 18);
         }
         document.getElementById('btn-gmaps').addEventListener('click', openGmapsModal);
@@ -1115,7 +1028,13 @@
 
         function escHtml(t) { return t ? String(t).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]) : ''; }
 
-        // ================== МАЛЮВАННЯ ==================
+        // ========== МАЛЮВАННЯ (з блокуванням інтерактивності) ==========
+        function setAllInteractive(enabled) {
+            pointsMarkers.forEach(m => { if (m) m.setInteractive(enabled); });
+            cablesLines.forEach(obj => { if (obj && obj.hitbox) obj.hitbox.setInteractive(enabled); });
+            if (userLocationMarker) userLocationMarker.setInteractive(enabled);
+        }
+
         function cancelDrawing() {
             if (mapClickHandler) { map.off('click', mapClickHandler); mapClickHandler = null; }
             if (pendingPolyline) { map.removeLayer(pendingPolyline); pendingPolyline = null; }
@@ -1125,21 +1044,29 @@
             document.getElementById('btn-marker').classList.remove('active');
             document.getElementById('btn-cable').classList.remove('active');
             document.getElementById('fab-undo').style.display = 'none';
-            setAllInteractive(true); // повертаємо інтерактивність
+            // інтерактивність повертається тільки після confirm/cancel
         }
+
         function startDrawing(type) {
             if (pendingLayer) { alert('Спочатку збережіть або скасуйте попередній об\'єкт.'); return; }
-            cancelDrawing(); isDrawing = true;
-            setAllInteractive(false); // блокуємо всі існуючі об'єкти
+            cancelDrawing();
+            isDrawing = true;
+            setAllInteractive(false);   // блокуємо всі існуючі об'єкти
+
             currentColor = document.getElementById('color-picker').value;
             currentWeight = +document.getElementById('weight-slider').value;
             currentDashArray = document.getElementById('line-style-select').value || null;
             currentMarkerType = document.getElementById('marker-type-select').value;
+
             if (type === 'marker') {
                 document.getElementById('btn-marker').classList.add('active');
                 document.getElementById('btn-cancel').style.display = 'inline-flex';
                 activeDrawType = 'marker';
-                mapClickHandler = (e) => { const marker = L.marker(e.latlng, { icon: createAdaptiveIcon(currentMarkerType) }).addTo(map); pendingLayer = marker; pendingType = 'marker'; showConfirmPanel(); cancelDrawing(); };
+                mapClickHandler = (e) => {
+                    const marker = L.marker(e.latlng, { icon: createAdaptiveIcon(currentMarkerType) }).addTo(map);
+                    pendingLayer = marker; pendingType = 'marker';
+                    showConfirmPanel(); cancelDrawing();
+                };
                 map.on('click', mapClickHandler);
             } else {
                 document.getElementById('btn-cable').classList.add('active');
@@ -1147,10 +1074,16 @@
                 document.getElementById('btn-finish').style.display = 'inline-flex';
                 document.getElementById('fab-undo').style.display = 'flex';
                 activeDrawType = 'polyline'; pendingLineCoords = [];
-                mapClickHandler = (e) => { const { lat, lng } = e.latlng; pendingLineCoords.push([lat, lng]); if (pendingPolyline) pendingPolyline.addLatLng([lat, lng]); else pendingPolyline = L.polyline([[lat, lng]], { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map); };
+                mapClickHandler = (e) => {
+                    const { lat, lng } = e.latlng;
+                    pendingLineCoords.push([lat, lng]);
+                    if (pendingPolyline) pendingPolyline.addLatLng([lat, lng]);
+                    else pendingPolyline = L.polyline([[lat, lng]], { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map);
+                };
                 map.on('click', mapClickHandler);
             }
         }
+
         function finishPolyline() {
             if (activeDrawType !== 'polyline' || pendingLineCoords.length < 2) { alert('Потрібно щонайменше дві вершини.'); return; }
             const simplified = simplifyLine(pendingLineCoords, 0.00002);
@@ -1165,6 +1098,7 @@
         function undoLastVertex() { if (activeDrawType !== 'polyline' || !pendingPolyline || pendingLineCoords.length === 0) return; pendingLineCoords.pop(); map.removeLayer(pendingPolyline); pendingPolyline = pendingLineCoords.length > 0 ? L.polyline(pendingLineCoords, { color: currentColor, weight: currentWeight, dashArray: currentDashArray }).addTo(map) : null; }
         function showConfirmPanel() { document.getElementById('confirm-panel').classList.add('show'); }
         function hideConfirmPanel() { document.getElementById('confirm-panel').classList.remove('show'); }
+
         async function confirmDrawing() {
             if (!pendingLayer || !pendingType) return;
             try {
@@ -1200,7 +1134,7 @@
             });
         }
 
-        // ================== ГРУПИ ==================
+        // Групи
         let editingGroupId = null;
         function openGroupModal(group=null) {
             const m = document.getElementById('group-modal');
@@ -1242,7 +1176,6 @@
             const noGroupP = [], noGroupC = [];
             points.forEach(p => { const gIds = p.group_ids||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.points.push(p)) : noGroupP.push(p); });
             cables.forEach(c => { const gIds = c.group_ids||[]; gIds.length ? gIds.forEach(id => groupMap.get(id)?.cables.push(c)) : noGroupC.push(c); });
-
             function itemElement(item, isCable) {
                 const div = document.createElement('div'); div.className = 'object-item';
                 div.innerHTML = `<div class="icon">${isCable?'📏':icons[item.type]?.html||'📍'}</div><div class="info"><div class="name">${escHtml(item.title)||(isCable?'Кабель':'Точка')}</div><div class="desc">${escHtml((item.notes||'').substring(0,40))}</div></div><div class="actions"><span class="edit-btn">✏️</span><span class="delete-btn">🗑️</span></div>`;
@@ -1251,7 +1184,6 @@
                 div.addEventListener('click', (e) => { if (e.target.closest('.actions')) return; if (confirm('Перейти до об\'єкта?')) { isCable ? (map.setView([item.coordinates[Math.floor(item.coordinates.length/2)][1], item.coordinates[Math.floor(item.coordinates.length/2)][0]], 16), cablesLines.get(item.id)?.hitbox.openPopup()) : (map.setView([item.lat, item.lng], 18), pointsMarkers.get(item.id)?.openPopup()); document.getElementById('objects-panel').classList.remove('show'); } });
                 return div;
             }
-
             for (const [, {group, points: gp, cables: gc}] of [...groupMap.entries()].sort((a,b) => a[1].group.name.localeCompare(b[1].group.name, 'uk'))) {
                 const fp = gp.filter(p => (p.title||'').toLowerCase().includes(term)||(p.notes||'').toLowerCase().includes(term)), fc = gc.filter(c => (c.title||'').toLowerCase().includes(term)||(c.notes||'').toLowerCase().includes(term));
                 if (!fp.length && !fc.length && !group.name.toLowerCase().includes(term)) continue;
@@ -1266,7 +1198,6 @@
                 list.append(gDiv, ch);
                 if (term && group.name.toLowerCase().includes(term)) { ch.classList.add('open'); gDiv.classList.add('open'); }
             }
-
             noGroupP.sort((a,b) => (a.title||'').localeCompare(b.title||'','uk')); noGroupC.sort((a,b) => (a.title||'').localeCompare(b.title||'','uk'));
             if (noGroupP.length || noGroupC.length || !term || 'без групи'.includes(term)) {
                 const ngDiv = document.createElement('div'); ngDiv.className = 'group-header'; ngDiv.innerHTML = `<div class="group-info"><span class="arrow">▶</span><span>📂 Без групи</span></div>`;
@@ -1279,14 +1210,14 @@
             if (!list.children.length) list.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:20px;">Нічого не знайдено</p>';
         }
 
-        // ================== ТЕМА ==================
+        // Тема
         document.getElementById('theme-btn').addEventListener('click', () => {
             document.body.classList.toggle('light-theme');
             localStorage.setItem('ipnet_theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
         });
         if (localStorage.getItem('ipnet_theme') === 'light') document.body.classList.add('light-theme');
 
-        // ================== ІНІЦІАЛІЗАЦІЯ ==================
+        // Ініціалізація
         document.addEventListener('DOMContentLoaded', () => {
             checkSession();
             document.getElementById('fab-tools').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('toolbar').classList.toggle('show'); });
@@ -1296,7 +1227,11 @@
             document.getElementById('search-input').addEventListener('input', (e) => renderObjectList(e.target.value));
             document.getElementById('btn-marker').addEventListener('click', () => startDrawing('marker'));
             document.getElementById('btn-cable').addEventListener('click', () => startDrawing('polyline'));
-            document.getElementById('btn-cancel').addEventListener('click', () => { cancelDrawing(); if (pendingLayer) { map.removeLayer(pendingLayer); pendingLayer = pendingType = null; hideConfirmPanel(); } });
+            document.getElementById('btn-cancel').addEventListener('click', () => {
+                cancelDrawing();
+                if (pendingLayer) { map.removeLayer(pendingLayer); pendingLayer = pendingType = null; hideConfirmPanel(); }
+                setAllInteractive(true);
+            });
             document.getElementById('btn-finish').addEventListener('click', finishPolyline);
             document.getElementById('confirm-save').addEventListener('click', confirmDrawing);
             document.getElementById('confirm-cancel').addEventListener('click', cancelConfirmDrawing);
