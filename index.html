@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>IP Net – Карта мережі</title>
 
-    <!-- PWA Manifest -->
     <link rel="manifest" href="/ipnet-map/manifest.json">
-
-    <!-- Реєстрація Service Worker -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -512,8 +509,6 @@
         let spiderMenuVisible = false;
 
         let userLocationMarker = null;
-
-        // PWA install
         let deferredPrompt;
 
         // Адаптивні функції
@@ -533,7 +528,6 @@
             deferredPrompt = e;
             document.getElementById('install-btn').style.display = 'inline-flex';
         });
-
         document.getElementById('install-btn').addEventListener('click', async () => {
             if (!deferredPrompt) return;
             deferredPrompt.prompt();
@@ -552,9 +546,8 @@
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session) showMap();
-                else loginScreen.style.display = 'flex'; // показуємо логін, якщо немає сесії
+                else loginScreen.style.display = 'flex';
             } catch(e) {
-                // немає мережі – показуємо карту одразу
                 showMap();
             }
         }
@@ -578,6 +571,19 @@
             await supabase.auth.signOut();
             location.reload();
         });
+
+        // ========== ФУНКЦІЯ БЛОКУВАННЯ ІНТЕРАКТИВНОСТІ ==========
+        function setAllInteractive(enabled) {
+            pointsMarkers.forEach(marker => {
+                if (marker) marker.setInteractive(enabled);
+            });
+            cablesLines.forEach(obj => {
+                if (obj && obj.hitbox) obj.hitbox.setInteractive(enabled);
+            });
+            if (userLocationMarker) {
+                userLocationMarker.setInteractive(enabled);
+            }
+        }
 
         // ========== SUPABASE CRUD (з локальним кешуванням) ==========
         async function loadPoints() {
@@ -877,7 +883,8 @@
                         color: '#ffffff',
                         weight: 2,
                         opacity: 1,
-                        fillOpacity: 0.8
+                        fillOpacity: 0.8,
+                        interactive: true
                     }).addTo(map).bindPopup('📍 Ви тут').openPopup();
                     document.getElementById('btn-clearlocate').style.display = 'inline-flex';
                 },
@@ -1118,10 +1125,12 @@
             document.getElementById('btn-marker').classList.remove('active');
             document.getElementById('btn-cable').classList.remove('active');
             document.getElementById('fab-undo').style.display = 'none';
+            setAllInteractive(true); // повертаємо інтерактивність
         }
         function startDrawing(type) {
             if (pendingLayer) { alert('Спочатку збережіть або скасуйте попередній об\'єкт.'); return; }
             cancelDrawing(); isDrawing = true;
+            setAllInteractive(false); // блокуємо всі існуючі об'єкти
             currentColor = document.getElementById('color-picker').value;
             currentWeight = +document.getElementById('weight-slider').value;
             currentDashArray = document.getElementById('line-style-select').value || null;
@@ -1170,11 +1179,17 @@
                 }
                 map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null;
                 hideConfirmPanel(); isDrawing = false;
+                setAllInteractive(true);
             } catch(e) {
                 hideConfirmPanel(); isDrawing = false;
+                setAllInteractive(true);
             }
         }
-        function cancelConfirmDrawing() { if (pendingLayer) { map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null; } hideConfirmPanel(); isDrawing = false; }
+        function cancelConfirmDrawing() {
+            if (pendingLayer) { map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null; }
+            hideConfirmPanel(); isDrawing = false;
+            setAllInteractive(true);
+        }
         async function snapCoordinates(coords) {
             const points = await loadPoints();
             const SNAP = 0.00005;
