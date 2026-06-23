@@ -434,17 +434,18 @@
     <!-- Модалка для посилання Google Maps -->
     <div class="modal-overlay" id="gmaps-modal">
         <div class="modal">
-            <h3>🔗 Додати точку з Google Maps</h3>
+            <h3>🔗 Додати з Google Maps</h3>
             <input type="text" id="gmaps-url" placeholder="Вставте посилання Google Maps або координати" style="margin-bottom:12px;">
             <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:16px;">
                 Підтримуються формати:<br>
                 • https://www.google.com/maps?q=49.5369,26.2106<br>
-                • https://maps.app.goo.gl/... (відкриється координатами)<br>
+                • https://maps.app.goo.gl/... (відкрийте, потім скопіюйте повний URL)<br>
                 • 49.5369, 26.2106
             </div>
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button class="btn-secondary" id="gmaps-cancel">Скасувати</button>
-                <button class="btn-primary" id="gmaps-add">Додати точку</button>
+                <button class="btn-primary" id="gmaps-add-point">📍 Додати як точку</button>
+                <button class="btn-primary" id="gmaps-add-cable" style="background:var(--accent-hover);">📏 Почати кабель звідси</button>
             </div>
         </div>
     </div>
@@ -780,10 +781,7 @@
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     map.setView([latitude, longitude], 16);
-                    // Видалити старий маркер, якщо є
-                    if (userLocationMarker) {
-                        map.removeLayer(userLocationMarker);
-                    }
+                    if (userLocationMarker) { map.removeLayer(userLocationMarker); }
                     userLocationMarker = L.circleMarker([latitude, longitude], {
                         radius: 9,
                         fillColor: '#3b82f6',
@@ -806,10 +804,7 @@
         }
 
         function clearUserLocation() {
-            if (userLocationMarker) {
-                map.removeLayer(userLocationMarker);
-                userLocationMarker = null;
-            }
+            if (userLocationMarker) { map.removeLayer(userLocationMarker); userLocationMarker = null; }
             document.getElementById('btn-clearlocate').style.display = 'none';
         }
 
@@ -874,7 +869,7 @@
         document.getElementById('notes-cancel-btn').addEventListener('click', closeNotesModal);
         document.getElementById('notes-save-btn').addEventListener('click', saveNotesFromModal);
 
-        // ========== ФУНКЦІЯ ДОДАВАННЯ ТОЧКИ З GOOGLE MAPS ==========
+        // ========== ДОДАВАННЯ З GOOGLE MAPS (ТОЧКА / КАБЕЛЬ) ==========
         function parseCoordinates(input) {
             let match = input.match(/^\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)\s*$/);
             if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
@@ -895,12 +890,19 @@
         function closeGmapsModal() {
             document.getElementById('gmaps-modal').classList.remove('show');
         }
-        async function addPointFromGmaps() {
+
+        function getCoordsFromModal() {
             const url = document.getElementById('gmaps-url').value.trim();
-            if (!url) { alert('Вставте посилання або координати'); return; }
+            if (!url) { alert('Вставте посилання або координати'); return null; }
             const coords = parseCoordinates(url);
-            if (!coords) { alert('Не вдалося розпізнати координати.'); return; }
-            if (coords.lat < -90 || coords.lat > 90 || coords.lng < -180 || coords.lng > 180) { alert('Координати поза допустимим діапазоном'); return; }
+            if (!coords) { alert('Не вдалося розпізнати координати.'); return null; }
+            if (coords.lat < -90 || coords.lat > 90 || coords.lng < -180 || coords.lng > 180) { alert('Координати поза допустимим діапазоном'); return null; }
+            return coords;
+        }
+
+        async function addPointFromGmaps() {
+            const coords = getCoordsFromModal();
+            if (!coords) return;
             try {
                 currentMarkerType = document.getElementById('marker-type-select').value;
                 await savePoint({ type: currentMarkerType, title:'', notes:'', photo_url:'', group_ids:[], lat: coords.lat, lng: coords.lng });
@@ -909,8 +911,26 @@
             } catch(e) {}
         }
 
+        function startCableFromGmaps() {
+            const coords = getCoordsFromModal();
+            if (!coords) return;
+            // Запускаємо режим малювання кабелю
+            closeGmapsModal();
+            if (pendingLayer) { alert('Спочатку збережіть або скасуйте попередній об\'єкт.'); return; }
+            cancelDrawing();
+            startDrawing('polyline');
+            // Програмно додаємо першу вершину
+            const { lat, lng } = coords;
+            pendingLineCoords.push([lat, lng]);
+            pendingPolyline = L.polyline([[lat, lng]], {
+                color: currentColor, weight: currentWeight, dashArray: currentDashArray
+            }).addTo(map);
+            map.setView([lat, lng], 18);
+        }
+
         document.getElementById('btn-gmaps').addEventListener('click', openGmapsModal);
-        document.getElementById('gmaps-add').addEventListener('click', addPointFromGmaps);
+        document.getElementById('gmaps-add-point').addEventListener('click', addPointFromGmaps);
+        document.getElementById('gmaps-add-cable').addEventListener('click', startCableFromGmaps);
         document.getElementById('gmaps-cancel').addEventListener('click', closeGmapsModal);
 
         function createPointPopupContent(point) {
