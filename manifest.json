@@ -1,0 +1,15 @@
+{
+  "name": "IP Net – Карта мережі",
+  "short_name": "IP Net",
+  "start_url": "/ipnet-map/",
+  "display": "standalone",
+  "background_color": "#0b1120",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='192' height='192' viewBox='0 0 192 192'%3E%3Ccircle cx='96' cy='96' r='80' fill='%233b82f6'/%3E%3Ctext x='96' y='120' font-size='90' text-anchor='middle' fill='white'%3E📍%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
