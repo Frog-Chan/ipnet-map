@@ -9,7 +9,8 @@ const STATIC_ASSETS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
   'https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.css',
   'https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.js',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -55,7 +56,13 @@ self.addEventListener('fetch', (event) => {
   } else {
     event.respondWith(
       caches.match(event.request).then((cached) => {
-        return cached || fetch(event.request);
+        return cached || fetch(event.request).catch(() => {
+          // Якщо це HTML-сторінка – повертаємо закешований index.html (для SPA)
+          if (event.request.mode === 'navigate') {
+            return caches.match('/ipnet-map/');
+          }
+          return new Response('', { status: 504 });
+        });
       })
     );
   }
