@@ -411,6 +411,7 @@
         <div class="tool-row">
             <button id="group-btn">📁 Керування групами</button>
             <button id="theme-btn">🌓 Тема</button>
+            <button id="install-btn" style="display:none;">📲 Встановити застосунок</button>
             <button id="logout-btn" style="background:#7f1d1d;">🚪 Вийти</button>
         </div>
     </div>
@@ -512,6 +513,9 @@
 
         let userLocationMarker = null;
 
+        // PWA install
+        let deferredPrompt;
+
         // Адаптивні функції
         function getIconSize() { const z = map ? map.getZoom() : 14; return z >= 16 ? 32 : z >= 14 ? 26 : z >= 12 ? 20 : 16; }
         function getWeightForZoom(bw) { const z = map ? map.getZoom() : 14; return z >= 16 ? bw : z >= 14 ? Math.max(2, bw*0.8) : z >= 12 ? Math.max(1.5, bw*0.6) : Math.max(1, bw*0.4); }
@@ -523,13 +527,36 @@
             pole: {html:'🏗️'}, manhole: {html:'🕳️'}, antenna: {html:'📡'}, cabinet: {html:'🗄️'}
         };
 
+        // ========== PWA Install ==========
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('install-btn').style.display = 'inline-flex';
+        });
+
+        document.getElementById('install-btn').addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                document.getElementById('install-btn').style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+
         // ========== АВТОРИЗАЦІЯ ==========
         const loginScreen = document.getElementById('login-screen');
         const loginError = document.getElementById('login-error');
 
         async function checkSession() {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) showMap();
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) showMap();
+                else loginScreen.style.display = 'flex'; // показуємо логін, якщо немає сесії
+            } catch(e) {
+                // немає мережі – показуємо карту одразу
+                showMap();
+            }
         }
 
         function showMap() {
