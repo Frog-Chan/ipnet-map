@@ -276,7 +276,6 @@
         #spider-menu .spider-item:hover { border-color: var(--accent); background: var(--surface-solid); }
         .color-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 6px rgba(0,0,0,0.3); }
 
-        /* Попапи */
         .leaflet-popup-content-wrapper {
             background: var(--popup-bg) !important;
             color: var(--popup-text) !important;
@@ -290,8 +289,8 @@
             margin: 10px 14px;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             line-height: 1.5;
-            max-height: 60vh;  /* Максимальна висота 60% від висоти екрана */
-            overflow-y: auto;   /* Прокрутка, якщо контент не вміщається */
+            max-height: 60vh;
+            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
         }
         .leaflet-popup-content label { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; }
@@ -313,7 +312,6 @@
             #objects-panel { width: 100%; max-width: 100%; }
             #confirm-panel { top: 12px; padding: 10px 16px; font-size: 0.85rem; }
             .leaflet-popup-content { max-height: 50vh; margin: 8px 10px; }
-            .leaflet-popup-content input, .leaflet-popup-content textarea, .leaflet-popup-content select { font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -466,21 +464,48 @@
             location.reload();
         });
 
-        // ========== SUPABASE CRUD ==========
+        // ========== SUPABASE CRUD (з обробкою помилок) ==========
         async function loadPoints() { const { data } = await supabase.from('points').select('*'); return data || []; }
-        async function savePoint(point) { const { error } = await supabase.from('points').insert([point]); if (error) console.error('savePoint:', error); }
-        async function updatePoint(id, updates) { const { error } = await supabase.from('points').update(updates).eq('id', id); if (error) console.error('updatePoint:', error); }
-        async function deletePoint(id) { const { error } = await supabase.from('points').delete().eq('id', id); if (error) console.error('deletePoint:', error); }
+        async function savePoint(point) {
+            const { error } = await supabase.from('points').insert([point]);
+            if (error) { alert('Помилка збереження точки: ' + error.message); throw error; }
+        }
+        async function updatePoint(id, updates) {
+            const { error } = await supabase.from('points').update(updates).eq('id', id);
+            if (error) { alert('Помилка оновлення точки: ' + error.message); throw error; }
+        }
+        async function deletePoint(id) {
+            const { error } = await supabase.from('points').delete().eq('id', id);
+            if (error) { alert('Помилка видалення точки: ' + error.message); throw error; }
+        }
 
         async function loadCables() { const { data } = await supabase.from('cables').select('*'); return data || []; }
-        async function saveCable(cable) { const { error } = await supabase.from('cables').insert([cable]); if (error) console.error('saveCable:', error); }
-        async function updateCable(id, updates) { const { error } = await supabase.from('cables').update(updates).eq('id', id); if (error) console.error('updateCable:', error); }
-        async function deleteCable(id) { const { error } = await supabase.from('cables').delete().eq('id', id); if (error) console.error('deleteCable:', error); }
+        async function saveCable(cable) {
+            const { error } = await supabase.from('cables').insert([cable]);
+            if (error) { alert('Помилка збереження кабелю: ' + error.message); throw error; }
+        }
+        async function updateCable(id, updates) {
+            const { error } = await supabase.from('cables').update(updates).eq('id', id);
+            if (error) { alert('Помилка оновлення кабелю: ' + error.message); throw error; }
+        }
+        async function deleteCable(id) {
+            const { error } = await supabase.from('cables').delete().eq('id', id);
+            if (error) { alert('Помилка видалення кабелю: ' + error.message); throw error; }
+        }
 
         async function loadGroups() { const { data } = await supabase.from('groups').select('*'); return data || []; }
-        async function saveGroup(group) { const { error } = await supabase.from('groups').insert([group]); if (error) console.error('saveGroup:', error); }
-        async function updateGroup(id, updates) { const { error } = await supabase.from('groups').update(updates).eq('id', id); if (error) console.error('updateGroup:', error); }
-        async function deleteGroup(id) { const { error } = await supabase.from('groups').delete().eq('id', id); if (error) console.error('deleteGroup:', error); }
+        async function saveGroup(group) {
+            const { error } = await supabase.from('groups').insert([group]);
+            if (error) { alert('Помилка збереження групи: ' + error.message); throw error; }
+        }
+        async function updateGroup(id, updates) {
+            const { error } = await supabase.from('groups').update(updates).eq('id', id);
+            if (error) { alert('Помилка оновлення групи: ' + error.message); throw error; }
+        }
+        async function deleteGroup(id) {
+            const { error } = await supabase.from('groups').delete().eq('id', id);
+            if (error) { alert('Помилка видалення групи: ' + error.message); throw error; }
+        }
 
         // ========== REALTIME ==========
         function subscribeToRealtime() {
@@ -582,7 +607,7 @@
             if (pointsMarkers.has(point.id)) return;
             const icon = createAdaptiveIcon(point.type);
             const marker = L.marker([point.lat, point.lng], { icon, interactive: true }).addTo(map);
-            marker.bindPopup(() => createPointPopupContent(point)); // динамічний попап
+            marker.bindPopup(() => createPointPopupContent(point));
             marker.on('click', (e) => { if (isDrawing) return; L.DomEvent.stopPropagation(e); handleMarkerClick(point.id, e.originalEvent); });
             pointsMarkers.set(point.id, marker);
         }
@@ -598,7 +623,7 @@
             const decorator = L.polylineDecorator(visible, { patterns }).addTo(map);
 
             const hitbox = L.polyline(latlngs, { color: 'transparent', weight: 20, opacity: 0, interactive: true }).addTo(map);
-            hitbox.bindPopup(() => createCablePopupContent(cable)); // динамічний попап
+            hitbox.bindPopup(() => createCablePopupContent(cable));
             hitbox.on('click', (e) => { if (isDrawing) return; L.DomEvent.stopPropagation(e); handleCableClick(cable.id, e.originalEvent); });
 
             cablesLines.set(cable.id, { visible, hitbox, decorator });
@@ -634,7 +659,7 @@
             if (!point) return;
             const clickLatLng = map.mouseEventToLatLng(originalEvent);
             const nearby = await findNearbyObjects(clickLatLng, pointId, 'point');
-            map.closePopup(); // закриваємо будь-який відкритий попап
+            map.closePopup();
             if (nearby.length > 0) showSpiderMenu(originalEvent, [...nearby, {type:'point', data:point}]);
             else pointsMarkers.get(point.id)?.openPopup();
         }
@@ -644,7 +669,7 @@
             if (!cable) return;
             const clickLatLng = map.mouseEventToLatLng(originalEvent);
             const nearby = await findNearbyObjects(clickLatLng, cableId, 'cable');
-            map.closePopup(); // закриваємо будь-який відкритий попап
+            map.closePopup();
             if (nearby.length > 0) showSpiderMenu(originalEvent, [...nearby, {type:'cable', data:cable}]);
             else cablesLines.get(cable.id)?.hitbox.openPopup();
         }
@@ -714,11 +739,15 @@
                 const photo_url = container.querySelector('.popup-photo').value;
                 const cbs = container.querySelectorAll('.group-checkboxes input[type="checkbox"]:checked');
                 const group_ids = Array.from(cbs).map(cb => cb.value);
-                await updatePoint(point.id, { type, title, notes, photo_url, group_ids });
-                pointsMarkers.get(point.id)?.closePopup();
+                try {
+                    await updatePoint(point.id, { type, title, notes, photo_url, group_ids });
+                    pointsMarkers.get(point.id)?.closePopup();
+                } catch(e) {}
             };
             container.querySelector('.popup-delete').onclick = async () => {
-                if (confirm('Видалити цю точку?')) { await deletePoint(point.id); pointsMarkers.get(point.id)?.closePopup(); }
+                if (confirm('Видалити цю точку?')) {
+                    try { await deletePoint(point.id); pointsMarkers.get(point.id)?.closePopup(); } catch(e) {}
+                }
             };
             return container;
         }
@@ -758,11 +787,15 @@
                 const photo_url = container.querySelector('.popup-photo').value;
                 const cbs = container.querySelectorAll('.group-checkboxes input[type="checkbox"]:checked');
                 const group_ids = Array.from(cbs).map(cb => cb.value);
-                await updateCable(cable.id, { title, color, weight, dash_array, notes, photo_url, group_ids });
-                cablesLines.get(cable.id)?.hitbox.closePopup();
+                try {
+                    await updateCable(cable.id, { title, color, weight, dash_array, notes, photo_url, group_ids });
+                    cablesLines.get(cable.id)?.hitbox.closePopup();
+                } catch(e) {}
             };
             container.querySelector('.popup-delete').onclick = async () => {
-                if (confirm('Видалити цей кабель?')) { await deleteCable(cable.id); cablesLines.get(cable.id)?.hitbox.closePopup(); }
+                if (confirm('Видалити цей кабель?')) {
+                    try { await deleteCable(cable.id); cablesLines.get(cable.id)?.hitbox.closePopup(); } catch(e) {}
+                }
             };
             return container;
         }
@@ -819,19 +852,22 @@
         function hideConfirmPanel() { document.getElementById('confirm-panel').classList.remove('show'); }
         async function confirmDrawing() {
             if (!pendingLayer || !pendingType) return;
-            if (pendingType === 'marker') {
-                const { lat, lng } = pendingLayer.getLatLng();
-                const point = { type: currentMarkerType, title:'', notes:'', photo_url:'', group_ids:[], lat, lng };
-                await savePoint(point);
-            } else {
-                const latlngs = pendingLayer.getLatLngs();
-                let coords = latlngs.map(ll => [ll.lng, ll.lat]);
-                coords = await snapCoordinates(coords);
-                const cable = { title:'', color:currentColor, weight:currentWeight, dash_array:currentDashArray, notes:'', photo_url:'', group_ids:[], coordinates:coords };
-                await saveCable(cable);
+            try {
+                if (pendingType === 'marker') {
+                    const { lat, lng } = pendingLayer.getLatLng();
+                    await savePoint({ type: currentMarkerType, title:'', notes:'', photo_url:'', group_ids:[], lat, lng });
+                } else {
+                    const latlngs = pendingLayer.getLatLngs();
+                    let coords = latlngs.map(ll => [ll.lng, ll.lat]);
+                    coords = await snapCoordinates(coords);
+                    await saveCable({ title:'', color:currentColor, weight:currentWeight, dash_array:currentDashArray, notes:'', photo_url:'', group_ids:[], coordinates:coords });
+                }
+                map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null;
+                hideConfirmPanel(); isDrawing = false;
+            } catch(e) {
+                // помилка вже показана в savePoint/saveCable
+                hideConfirmPanel(); isDrawing = false;
             }
-            map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null;
-            hideConfirmPanel(); isDrawing = false;
         }
         function cancelConfirmDrawing() { if (pendingLayer) { map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null; } hideConfirmPanel(); isDrawing = false; }
         async function snapCoordinates(coords) {
@@ -858,21 +894,25 @@
         async function saveGroupFromModal() {
             const name = document.getElementById('group-name-input').value.trim();
             if (!name) { alert('Введіть назву'); return; }
-            if (editingGroupId) await updateGroup(editingGroupId, { name });
-            else await saveGroup({ name });
-            closeGroupModal();
-            if (document.getElementById('objects-panel').classList.contains('show')) renderObjectList(document.getElementById('search-input').value);
+            try {
+                if (editingGroupId) await updateGroup(editingGroupId, { name });
+                else await saveGroup({ name });
+                closeGroupModal();
+                if (document.getElementById('objects-panel').classList.contains('show')) renderObjectList(document.getElementById('search-input').value);
+            } catch(e) {}
         }
         async function deleteGroupFromModal() {
             if (!editingGroupId) return;
             if (!confirm('Видалити групу?')) return;
-            const pts = (await loadPoints()).filter(p => (p.group_ids||[]).includes(editingGroupId));
-            const cbls = (await loadCables()).filter(c => (c.group_ids||[]).includes(editingGroupId));
-            for (const p of pts) await updatePoint(p.id, { group_ids: p.group_ids.filter(id => id !== editingGroupId) });
-            for (const c of cbls) await updateCable(c.id, { group_ids: c.group_ids.filter(id => id !== editingGroupId) });
-            await deleteGroup(editingGroupId);
-            closeGroupModal();
-            if (document.getElementById('objects-panel').classList.contains('show')) renderObjectList(document.getElementById('search-input').value);
+            try {
+                const pts = (await loadPoints()).filter(p => (p.group_ids||[]).includes(editingGroupId));
+                const cbls = (await loadCables()).filter(c => (c.group_ids||[]).includes(editingGroupId));
+                for (const p of pts) await updatePoint(p.id, { group_ids: p.group_ids.filter(id => id !== editingGroupId) });
+                for (const c of cbls) await updateCable(c.id, { group_ids: c.group_ids.filter(id => id !== editingGroupId) });
+                await deleteGroup(editingGroupId);
+                closeGroupModal();
+                if (document.getElementById('objects-panel').classList.contains('show')) renderObjectList(document.getElementById('search-input').value);
+            } catch(e) {}
         }
 
         async function renderObjectList(filter='') {
