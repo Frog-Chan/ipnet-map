@@ -276,6 +276,7 @@
         #spider-menu .spider-item:hover { border-color: var(--accent); background: var(--surface-solid); }
         .color-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; box-shadow: 0 0 6px rgba(0,0,0,0.3); }
 
+        /* Попапи */
         .leaflet-popup-content-wrapper {
             background: var(--popup-bg) !important;
             color: var(--popup-text) !important;
@@ -286,9 +287,12 @@
         }
         .leaflet-popup-tip { background: var(--popup-bg) !important; }
         .leaflet-popup-content {
-            margin: 12px 16px;
+            margin: 10px 14px;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             line-height: 1.5;
+            max-height: 60vh;  /* Максимальна висота 60% від висоти екрана */
+            overflow-y: auto;   /* Прокрутка, якщо контент не вміщається */
+            -webkit-overflow-scrolling: touch;
         }
         .leaflet-popup-content label { color: var(--text-secondary); font-size: 0.8rem; font-weight: 500; }
         .leaflet-popup-content input, .leaflet-popup-content textarea, .leaflet-popup-content select {
@@ -308,6 +312,8 @@
             #toolbar { left: 10px; max-width: calc(100vw - 40px); padding: 16px; }
             #objects-panel { width: 100%; max-width: 100%; }
             #confirm-panel { top: 12px; padding: 10px 16px; font-size: 0.85rem; }
+            .leaflet-popup-content { max-height: 50vh; margin: 8px 10px; }
+            .leaflet-popup-content input, .leaflet-popup-content textarea, .leaflet-popup-content select { font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -628,8 +634,9 @@
             if (!point) return;
             const clickLatLng = map.mouseEventToLatLng(originalEvent);
             const nearby = await findNearbyObjects(clickLatLng, pointId, 'point');
+            map.closePopup(); // закриваємо будь-який відкритий попап
             if (nearby.length > 0) showSpiderMenu(originalEvent, [...nearby, {type:'point', data:point}]);
-            else { pointsMarkers.get(point.id)?.openPopup(); }
+            else pointsMarkers.get(point.id)?.openPopup();
         }
         async function handleCableClick(cableId, originalEvent) {
             if (spiderMenuVisible) { closeSpiderMenu(); return; }
@@ -637,8 +644,9 @@
             if (!cable) return;
             const clickLatLng = map.mouseEventToLatLng(originalEvent);
             const nearby = await findNearbyObjects(clickLatLng, cableId, 'cable');
+            map.closePopup(); // закриваємо будь-який відкритий попап
             if (nearby.length > 0) showSpiderMenu(originalEvent, [...nearby, {type:'cable', data:cable}]);
-            else { cablesLines.get(cable.id)?.hitbox.openPopup(); }
+            else cablesLines.get(cable.id)?.hitbox.openPopup();
         }
         function showSpiderMenu(event, objects) {
             const menu = document.getElementById('spider-menu');
@@ -680,18 +688,18 @@
 
         function createPointPopupContent(point) {
             const container = document.createElement('div');
-            container.style.cssText = 'min-width:280px;max-width:340px;color:var(--popup-text);';
+            container.style.cssText = 'min-width:260px;max-width:320px;color:var(--popup-text);';
             const sIds = point.group_ids || [];
             container.innerHTML = `
-                <h4 style="margin:0 0 14px;font-size:1.15rem;font-weight:600;">${escHtml(point.title)||'Точка'}</h4>
-                <div style="margin-bottom:12px;"><label>Тип</label><select class="popup-type" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.9rem;margin-top:4px;">${Object.keys(icons).map(t=>`<option value="${t}" ${point.type===t?'selected':''}>${icons[t].html} ${t}</option>`).join('')}</select></div>
-                <div style="margin-bottom:12px;"><label>Назва</label><input class="popup-title" value="${escHtml(point.title||'')}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.9rem;margin-top:4px;"></div>
-                <div style="margin-bottom:12px;"><label>Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:4px;"><div class="group-checkboxes" style="max-height:140px;overflow-y:auto;border:1px solid var(--popup-border);border-radius:10px;padding:8px;margin-top:4px;background:var(--input-bg);"></div></div>
-                <div style="margin-bottom:12px;"><label>URL фото</label><input class="popup-photo" value="${escHtml(point.photo_url||'')}" placeholder="https://..." style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:4px;"></div>
-                ${point.photo_url ? `<img src="${point.photo_url}" style="max-width:100%;max-height:200px;border-radius:10px;margin-bottom:12px;" onerror="this.style.display='none'">` : ''}
-                <div style="margin-bottom:12px;"><label>Нотатки</label><textarea class="popup-notes" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.9rem;margin-top:4px;resize:vertical;">${escHtml(point.notes||'')}</textarea></div>
-                <div style="margin-bottom:12px;"><label>Координати</label><div style="display:flex;gap:6px;align-items:center;margin-top:4px;"><input class="popup-coords" value="${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}" readonly style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;"><button class="copy-coords-btn" style="padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${point.lat},${point.lng}" target="_blank" style="font-size:0.8rem;color:var(--accent);margin-top:6px;display:inline-block;">Відкрити в Google Maps</a></div>
-                <div style="display:flex;gap:8px;margin-top:14px;"><button class="popup-save" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;">💾 Зберегти</button><button class="popup-delete" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--danger);color:white;font-weight:600;cursor:pointer;">🗑️ Видалити</button></div>
+                <h4 style="margin:0 0 10px;font-size:1.1rem;font-weight:600;">${escHtml(point.title)||'Точка'}</h4>
+                <div style="margin-bottom:8px;"><label>Тип</label><select class="popup-type" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;">${Object.keys(icons).map(t=>`<option value="${t}" ${point.type===t?'selected':''}>${icons[t].html} ${t}</option>`).join('')}</select></div>
+                <div style="margin-bottom:8px;"><label>Назва</label><input class="popup-title" value="${escHtml(point.title||'')}" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;"></div>
+                <div style="margin-bottom:8px;"><label>Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;margin-top:2px;"><div class="group-checkboxes" style="max-height:100px;overflow-y:auto;border:1px solid var(--popup-border);border-radius:8px;padding:4px 6px;margin-top:2px;background:var(--input-bg);"></div></div>
+                <div style="margin-bottom:8px;"><label>URL фото</label><input class="popup-photo" value="${escHtml(point.photo_url||'')}" placeholder="https://..." style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;margin-top:2px;"></div>
+                ${point.photo_url ? `<img src="${point.photo_url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-bottom:8px;" onerror="this.style.display='none'">` : ''}
+                <div style="margin-bottom:8px;"><label>Нотатки</label><textarea class="popup-notes" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;resize:vertical;">${escHtml(point.notes||'')}</textarea></div>
+                <div style="margin-bottom:8px;"><label>Координати</label><div style="display:flex;gap:4px;align-items:center;margin-top:2px;"><input class="popup-coords" value="${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;"><button class="copy-coords-btn" style="padding:6px 8px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${point.lat},${point.lng}" target="_blank" style="font-size:0.75rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a></div>
+                <div style="display:flex;gap:6px;margin-top:10px;"><button class="popup-save" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">💾 Зберегти</button><button class="popup-delete" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--danger);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">🗑️ Видалити</button></div>
             `;
             const gs = container.querySelector('.group-search');
             const gc = container.querySelector('.group-checkboxes');
@@ -717,22 +725,22 @@
 
         function createCablePopupContent(cable) {
             const container = document.createElement('div');
-            container.style.cssText = 'min-width:280px;max-width:340px;color:var(--popup-text);';
+            container.style.cssText = 'min-width:260px;max-width:320px;color:var(--popup-text);';
             const dashOpts = [{v:'',l:'Суцільна'},{v:'10,10',l:'Штрих'},{v:'5,5',l:'Пунктир'},{v:'15,5,2,5',l:'Штрих-пунктир'}];
             const sIds = cable.group_ids || [];
             const mid = cable.coordinates[Math.floor(cable.coordinates.length/2)];
             const midLL = mid ? `${mid[1].toFixed(6)}, ${mid[0].toFixed(6)}` : '';
             container.innerHTML = `
-                <h4 style="margin:0 0 14px;font-size:1.15rem;font-weight:600;">${escHtml(cable.title)||'Кабель'}</h4>
-                <div style="margin-bottom:12px;"><label>Назва</label><input class="popup-title" value="${escHtml(cable.title||'')}" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.9rem;margin-top:4px;"></div>
-                <div style="display:flex;gap:10px;margin-bottom:12px;"><div style="flex:1;"><label>Колір</label><input type="color" class="popup-color" value="${cable.color}" style="width:100%;height:44px;border-radius:10px;border:1px solid var(--popup-border);margin-top:4px;"></div><div style="flex:1;"><label>Товщина</label><input type="range" class="popup-weight" min="1" max="10" value="${cable.weight||3}" style="width:100%;margin-top:4px;accent-color:var(--accent);"></div></div>
-                <div style="margin-bottom:12px;"><label>Стиль лінії</label><select class="popup-dash" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.9rem;margin-top:4px;">${dashOpts.map(o=>`<option value="${o.v}" ${(cable.dash_array||'')===o.v?'selected':''}>${o.l}</option>`).join('')}</select></div>
-                <div style="margin-bottom:12px;"><label>Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:4px;"><div class="group-checkboxes" style="max-height:140px;overflow-y:auto;border:1px solid var(--popup-border);border-radius:10px;padding:8px;margin-top:4px;background:var(--input-bg);"></div></div>
-                <div style="margin-bottom:12px;"><label>URL фото</label><input class="popup-photo" value="${escHtml(cable.photo_url||'')}" placeholder="https://..." style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:4px;"></div>
-                ${cable.photo_url ? `<img src="${cable.photo_url}" style="max-width:100%;max-height:200px;border-radius:10px;margin-bottom:12px;" onerror="this.style.display='none'">` : ''}
-                <div style="margin-bottom:12px;"><label>Нотатки</label><textarea class="popup-notes" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.9rem;margin-top:4px;resize:vertical;">${escHtml(cable.notes||'')}</textarea></div>
-                ${mid?`<div style="margin-bottom:12px;"><label>Координати (середина)</label><div style="display:flex;gap:6px;align-items:center;margin-top:4px;"><input class="popup-coords" value="${midLL}" readonly style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;"><button class="copy-coords-btn" style="padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${midLL}" target="_blank" style="font-size:0.8rem;color:var(--accent);margin-top:6px;display:inline-block;">Відкрити в Google Maps</a></div>`:''}
-                <div style="display:flex;gap:8px;margin-top:14px;"><button class="popup-save" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;">💾 Зберегти</button><button class="popup-delete" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--danger);color:white;font-weight:600;cursor:pointer;">🗑️ Видалити</button></div>
+                <h4 style="margin:0 0 10px;font-size:1.1rem;font-weight:600;">${escHtml(cable.title)||'Кабель'}</h4>
+                <div style="margin-bottom:8px;"><label>Назва</label><input class="popup-title" value="${escHtml(cable.title||'')}" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;"></div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;"><div style="flex:1;"><label>Колір</label><input type="color" class="popup-color" value="${cable.color}" style="width:100%;height:38px;border-radius:8px;border:1px solid var(--popup-border);margin-top:2px;"></div><div style="flex:1;"><label>Товщина</label><input type="range" class="popup-weight" min="1" max="10" value="${cable.weight||3}" style="width:100%;margin-top:2px;accent-color:var(--accent);"></div></div>
+                <div style="margin-bottom:8px;"><label>Стиль лінії</label><select class="popup-dash" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;">${dashOpts.map(o=>`<option value="${o.v}" ${(cable.dash_array||'')===o.v?'selected':''}>${o.l}</option>`).join('')}</select></div>
+                <div style="margin-bottom:8px;"><label>Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;margin-top:2px;"><div class="group-checkboxes" style="max-height:100px;overflow-y:auto;border:1px solid var(--popup-border);border-radius:8px;padding:4px 6px;margin-top:2px;background:var(--input-bg);"></div></div>
+                <div style="margin-bottom:8px;"><label>URL фото</label><input class="popup-photo" value="${escHtml(cable.photo_url||'')}" placeholder="https://..." style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;margin-top:2px;"></div>
+                ${cable.photo_url ? `<img src="${cable.photo_url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-bottom:8px;" onerror="this.style.display='none'">` : ''}
+                <div style="margin-bottom:8px;"><label>Нотатки</label><textarea class="popup-notes" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;resize:vertical;">${escHtml(cable.notes||'')}</textarea></div>
+                ${mid?`<div style="margin-bottom:8px;"><label>Координати (середина)</label><div style="display:flex;gap:4px;align-items:center;margin-top:2px;"><input class="popup-coords" value="${midLL}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;"><button class="copy-coords-btn" style="padding:6px 8px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${midLL}" target="_blank" style="font-size:0.75rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a></div>`:''}
+                <div style="display:flex;gap:6px;margin-top:10px;"><button class="popup-save" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">💾 Зберегти</button><button class="popup-delete" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--danger);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">🗑️ Видалити</button></div>
             `;
             const gs = container.querySelector('.group-search');
             const gc = container.querySelector('.group-checkboxes');
@@ -916,7 +924,6 @@
             document.body.classList.toggle('light-theme');
             localStorage.setItem('ipnet_theme', document.body.classList.contains('light-theme') ? 'light' : 'dark');
         });
-        // Встановлення теми при завантаженні
         if (localStorage.getItem('ipnet_theme') === 'light') document.body.classList.add('light-theme');
 
         // ================== ІНІЦІАЛІЗАЦІЯ ==================
