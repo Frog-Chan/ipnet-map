@@ -258,6 +258,37 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-danger:hover { background: var(--danger-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.4); }
 
+        #notes-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 4000; display: none;
+            background: var(--surface-solid);
+            flex-direction: column;
+        }
+        #notes-modal.show { display: flex; }
+        #notes-modal .notes-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; border-bottom: 1px solid var(--border);
+        }
+        #notes-modal .notes-header h3 { font-size: 1.2rem; font-weight: 600; }
+        #notes-modal .notes-header button {
+            background: none; border: none; color: var(--text-secondary);
+            font-size: 1.8rem; cursor: pointer; padding: 8px;
+        }
+        #notes-modal .notes-body {
+            flex: 1; padding: 20px; display: flex; flex-direction: column;
+        }
+        #notes-modal textarea {
+            flex: 1; width: 100%; padding: 16px;
+            border-radius: var(--radius-sm); border: 1px solid var(--border);
+            background: var(--input-bg); color: var(--text);
+            font-size: 1rem; resize: none; font-family: inherit;
+        }
+        #notes-modal textarea:focus { outline: none; border-color: var(--accent); }
+        #notes-modal .notes-footer {
+            padding: 16px 20px; border-top: 1px solid var(--border);
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+
         #spider-menu {
             position: absolute; z-index: 2500;
             background: var(--glass); border: 1px solid var(--border);
@@ -394,6 +425,21 @@
         </div>
     </div>
 
+    <!-- Модалка для нотаток -->
+    <div id="notes-modal">
+        <div class="notes-header">
+            <h3>Нотатки</h3>
+            <button id="notes-close-btn">✕</button>
+        </div>
+        <div class="notes-body">
+            <textarea id="notes-textarea" placeholder="Введіть нотатки..."></textarea>
+        </div>
+        <div class="notes-footer">
+            <button class="btn-secondary" id="notes-cancel-btn">Скасувати</button>
+            <button class="btn-primary" id="notes-save-btn">💾 Зберегти</button>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-polylinedecorator/dist/leaflet.polylineDecorator.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -424,7 +470,7 @@
         let mapClickHandler = null;
         let spiderMenuVisible = false;
 
-        // Адаптивні функції
+        // ========== АДАПТИВНІ ФУНКЦІЇ ==========
         function getIconSize() { const z = map ? map.getZoom() : 14; return z >= 16 ? 32 : z >= 14 ? 26 : z >= 12 ? 20 : 16; }
         function getWeightForZoom(bw) { const z = map ? map.getZoom() : 14; return z >= 16 ? bw : z >= 14 ? Math.max(2, bw*0.8) : z >= 12 ? Math.max(1.5, bw*0.6) : Math.max(1, bw*0.4); }
         function getArrowSize() { const z = map ? map.getZoom() : 14; return z >= 16 ? 10 : z >= 15 ? 8 : z >= 14 ? 6 : 0; }
@@ -464,7 +510,7 @@
             location.reload();
         });
 
-        // ========== SUPABASE CRUD (з обробкою помилок) ==========
+        // ========== SUPABASE CRUD ==========
         async function loadPoints() { const { data } = await supabase.from('points').select('*'); return data || []; }
         async function savePoint(point) {
             const { error } = await supabase.from('points').insert([point]);
@@ -711,6 +757,50 @@
             `).join('');
         }
 
+        let currentNotesData = { type: null, id: null, field: 'notes' };
+
+        function openNotesModal(type, id, currentText, field = 'notes') {
+            currentNotesData = { type, id, field };
+            const modal = document.getElementById('notes-modal');
+            const textarea = document.getElementById('notes-textarea');
+            textarea.value = currentText || '';
+            modal.classList.add('show');
+            textarea.focus();
+        }
+
+        function closeNotesModal() {
+            document.getElementById('notes-modal').classList.remove('show');
+        }
+
+        async function saveNotesFromModal() {
+            const { type, id, field } = currentNotesData;
+            const newText = document.getElementById('notes-textarea').value;
+            try {
+                if (type === 'point') {
+                    await updatePoint(id, { [field]: newText });
+                    const point = (await supabase.from('points').select('*').eq('id', id).single()).data;
+                    if (point) {
+                        const marker = pointsMarkers.get(id);
+                        if (marker) marker.setPopupContent(createPointPopupContent(point));
+                    }
+                } else if (type === 'cable') {
+                    await updateCable(id, { [field]: newText });
+                    const cable = (await supabase.from('cables').select('*').eq('id', id).single()).data;
+                    if (cable) {
+                        const line = cablesLines.get(id);
+                        if (line) line.hitbox.setPopupContent(createCablePopupContent(cable));
+                    }
+                }
+                closeNotesModal();
+            } catch(e) {
+                alert('Помилка збереження: ' + e.message);
+            }
+        }
+
+        document.getElementById('notes-close-btn').addEventListener('click', closeNotesModal);
+        document.getElementById('notes-cancel-btn').addEventListener('click', closeNotesModal);
+        document.getElementById('notes-save-btn').addEventListener('click', saveNotesFromModal);
+
         function createPointPopupContent(point) {
             const container = document.createElement('div');
             container.style.cssText = 'min-width:260px;max-width:320px;color:var(--popup-text);';
@@ -722,7 +812,11 @@
                 <div style="margin-bottom:8px;"><label>Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;margin-top:2px;"><div class="group-checkboxes" style="max-height:100px;overflow-y:auto;border:1px solid var(--popup-border);border-radius:8px;padding:4px 6px;margin-top:2px;background:var(--input-bg);"></div></div>
                 <div style="margin-bottom:8px;"><label>URL фото</label><input class="popup-photo" value="${escHtml(point.photo_url||'')}" placeholder="https://..." style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;margin-top:2px;"></div>
                 ${point.photo_url ? `<img src="${point.photo_url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-bottom:8px;" onerror="this.style.display='none'">` : ''}
-                <div style="margin-bottom:8px;"><label>Нотатки</label><textarea class="popup-notes" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;resize:vertical;">${escHtml(point.notes||'')}</textarea></div>
+                <div style="margin-bottom:8px;position:relative;">
+                    <label>Нотатки</label>
+                    <textarea class="popup-notes" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;resize:vertical;">${escHtml(point.notes||'')}</textarea>
+                    <button class="notes-expand-btn" style="position:absolute; top:2px; right:2px; background:var(--input-bg); border:1px solid var(--popup-border); border-radius:6px; padding:4px 8px; cursor:pointer; font-size:1.2rem;" title="Розгорнути">📖</button>
+                </div>
                 <div style="margin-bottom:8px;"><label>Координати</label><div style="display:flex;gap:4px;align-items:center;margin-top:2px;"><input class="popup-coords" value="${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;"><button class="copy-coords-btn" style="padding:6px 8px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${point.lat},${point.lng}" target="_blank" style="font-size:0.75rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a></div>
                 <div style="display:flex;gap:6px;margin-top:10px;"><button class="popup-save" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">💾 Зберегти</button><button class="popup-delete" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--danger);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">🗑️ Видалити</button></div>
             `;
@@ -749,6 +843,11 @@
                     try { await deletePoint(point.id); pointsMarkers.get(point.id)?.closePopup(); } catch(e) {}
                 }
             };
+            container.querySelector('.notes-expand-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const notesField = container.querySelector('.popup-notes');
+                openNotesModal('point', point.id, notesField.value);
+            });
             return container;
         }
 
@@ -767,7 +866,11 @@
                 <div style="margin-bottom:8px;"><label>Групи</label><input type="text" class="group-search" placeholder="Пошук груп..." style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;margin-top:2px;"><div class="group-checkboxes" style="max-height:100px;overflow-y:auto;border:1px solid var(--popup-border);border-radius:8px;padding:4px 6px;margin-top:2px;background:var(--input-bg);"></div></div>
                 <div style="margin-bottom:8px;"><label>URL фото</label><input class="popup-photo" value="${escHtml(cable.photo_url||'')}" placeholder="https://..." style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;margin-top:2px;"></div>
                 ${cable.photo_url ? `<img src="${cable.photo_url}" style="max-width:100%;max-height:150px;border-radius:8px;margin-bottom:8px;" onerror="this.style.display='none'">` : ''}
-                <div style="margin-bottom:8px;"><label>Нотатки</label><textarea class="popup-notes" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;resize:vertical;">${escHtml(cable.notes||'')}</textarea></div>
+                <div style="margin-bottom:8px;position:relative;">
+                    <label>Нотатки</label>
+                    <textarea class="popup-notes" rows="2" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.85rem;margin-top:2px;resize:vertical;">${escHtml(cable.notes||'')}</textarea>
+                    <button class="notes-expand-btn" style="position:absolute; top:2px; right:2px; background:var(--input-bg); border:1px solid var(--popup-border); border-radius:6px; padding:4px 8px; cursor:pointer; font-size:1.2rem;" title="Розгорнути">📖</button>
+                </div>
                 ${mid?`<div style="margin-bottom:8px;"><label>Координати (середина)</label><div style="display:flex;gap:4px;align-items:center;margin-top:2px;"><input class="popup-coords" value="${midLL}" readonly style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--popup-border);background:var(--input-bg);color:var(--popup-text);font-size:0.8rem;"><button class="copy-coords-btn" style="padding:6px 8px;border-radius:6px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;">📋</button></div><a href="https://www.google.com/maps?q=${midLL}" target="_blank" style="font-size:0.75rem;color:var(--accent);margin-top:4px;display:inline-block;">Відкрити в Google Maps</a></div>`:''}
                 <div style="display:flex;gap:6px;margin-top:10px;"><button class="popup-save" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">💾 Зберегти</button><button class="popup-delete" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--danger);color:white;font-weight:600;cursor:pointer;font-size:0.85rem;">🗑️ Видалити</button></div>
             `;
@@ -797,6 +900,11 @@
                     try { await deleteCable(cable.id); cablesLines.get(cable.id)?.hitbox.closePopup(); } catch(e) {}
                 }
             };
+            container.querySelector('.notes-expand-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const notesField = container.querySelector('.popup-notes');
+                openNotesModal('cable', cable.id, notesField.value);
+            });
             return container;
         }
 
@@ -865,7 +973,6 @@
                 map.removeLayer(pendingLayer); pendingLayer = null; pendingType = null;
                 hideConfirmPanel(); isDrawing = false;
             } catch(e) {
-                // помилка вже показана в savePoint/saveCable
                 hideConfirmPanel(); isDrawing = false;
             }
         }
